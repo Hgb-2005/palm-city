@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4efe5" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>掌心小城 · 小城更近一点</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body class="is-loading">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">PALM-SIZED WORLD · 14</p>
+            <h1>掌心小城</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span class="save-pill"><i></i><span id="saveState">本地自动保存</span></span>
+          <button class="ghost-button view-button" id="viewButton" type="button" aria-label="观赏小城" title="观赏小城" aria-pressed="false"><span aria-hidden="true">◉</span> <span class="button-label">观赏小城</span></button>
+          <button class="ghost-button" id="exportButton" type="button" aria-label="导出截图" title="导出截图"><span aria-hidden="true">↗</span> <span class="button-label">导出截图</span></button>
+          <button class="icon-button" id="resetButton" type="button" title="恢复当前小城的初始布局" aria-label="恢复当前小城的初始布局">↺</button>
+        </div>
+      </header>
+
+      <section class="collection-bar" aria-label="我的小城收藏馆">
+        <button type="button" class="collection-current" id="openCollection"><span class="collection-icon" aria-hidden="true">▤</span><span><small>MY LITTLE WORLDS · 我的小城收藏馆</small><strong id="currentCityName">正在翻开小城…</strong></span><span class="collection-chevron">⌄</span></button>
+        <span class="collection-bar-note" id="collectionBarNote">每一座，都可以慢慢长大。</span>
+        <div class="collection-bar-actions"><button type="button" id="quickDuplicate">▧ <span>复制这座</span></button><button type="button" id="newCityButton" class="new-city-button">＋ 新建小城</button></div>
+      </section>
+      <div class="collection-notice" id="collectionNotice" hidden role="status"><span id="collectionNoticeText"></span><div><button type="button" id="rescueCopy">保留当前为副本</button><button type="button" id="reloadCity">重新载入</button><button type="button" id="rescueExport">导出当前备份</button></div></div>
+
+      <main class="workspace">
+        <aside class="sidebar palette-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">BUILD YOUR PLACE</p>
+              <h2>搭一座想住的城</h2>
+            </div>
+            <span class="step-count">自由建造</span>
+          </div>
+          <p class="panel-intro">让喜欢的街角，走过春夏秋冬。跟着邻居散散步，把不同季节的日常收进相册。</p>
+
+          <div class="category-tabs" role="tablist" aria-label="建筑分类">
+            <button class="category-tab is-active" type="button" data-category="all">全部</button>
+            <button class="category-tab" type="button" data-category="building">建筑</button>
+            <button class="category-tab" type="button" data-category="public">公共</button>
+            <button class="category-tab" type="button" data-category="nature">景观</button>
+          </div>
+
+          <div class="palette-list" id="paletteList">
+            <button class="palette-card new-material" type="button" data-type="dock" data-category="public">
+              <span class="palette-icon dock-icon">⚑</span>
+              <span class="palette-copy"><strong>小码头</strong><small>把远方，接到小城身旁</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card new-material" type="button" data-type="pavilion" data-category="public">
+              <span class="palette-icon pavilion-icon">⌑</span>
+              <span class="palette-copy"><strong>凉亭</strong><small>给雨中的邻居留个屋檐</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card new-material" type="button" data-type="garden" data-category="nature">
+              <span class="palette-icon garden-icon">⚘</span>
+              <span class="palette-copy"><strong>小花园</strong><small>从一颗种子，等到花开</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="house" data-category="building">
+              <span class="palette-icon house-icon">⌂</span>
+              <span class="palette-copy"><strong>小屋</strong><small>随水岸、花草与邻居变样</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="shop" data-category="building">
+              <span class="palette-icon shop-icon">▥</span>
+              <span class="palette-copy"><strong>小商店</strong><small>交换日常的小窗口</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="tree" data-category="nature">
+              <span class="palette-icon tree-icon">✦</span>
+              <span class="palette-copy"><strong>树木</strong><small>让风有地方停留</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="road" data-category="building">
+              <span class="palette-icon road-icon">╱</span>
+              <span class="palette-copy"><strong>小路</strong><small>转角、岔路，自然连起来</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="bench" data-category="public">
+              <span class="palette-icon bench-icon">☷</span>
+              <span class="palette-copy"><strong>长椅</strong><small>坐下来，听一会儿风</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="lamp" data-category="public">
+              <span class="palette-icon lamp-icon">♧</span>
+              <span class="palette-copy"><strong>路灯</strong><small>为晚归的人留一盏光</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="plaza" data-category="public">
+              <span class="palette-icon plaza-icon">✳</span>
+              <span class="palette-copy"><strong>小广场</strong><small>在街角，说一声你好</small></span><span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="flower" data-category="nature">
+              <span class="palette-icon flower-icon">❀</span>
+              <span class="palette-copy"><strong>花坛</strong><small>给小城一点颜色</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+            <button class="palette-card" type="button" data-type="water" data-category="nature">
+              <span class="palette-icon water-icon">≈</span>
+              <span class="palette-copy"><strong>水面</strong><small>收住一小片天空</small></span>
+              <span class="palette-arrow">+</span>
+            </button>
+          </div>
+
+          <div class="palette-tip">
+            <span class="tip-icon">✦</span>
+            <span>拖动空白处浏览小城，滚轮或右下角按钮缩放。</span>
+          </div>
+          <div class="version-note"><span>CHAPTER 14</span><strong>小城更近一点</strong><small>靠近一个街角，看见布置留下的小小变化。</small></div>
+        </aside>
+
+        <section class="city-column">
+          <div class="city-toolbar">
+            <div class="toolbar-context"><span class="live-dot"></span><span id="modeLabel">正在建造</span><span class="toolbar-divider"></span><span id="selectedHint">请选择一个元素</span></div>
+            <div class="toolbar-actions">
+              <button class="toolbar-button" id="undoButton" type="button" disabled title="撤销上一步">↶ <span>撤销</span></button>
+              <button class="toolbar-button" id="redoButton" type="button" disabled title="重做上一步">↷ <span>重做</span></button>
+              <button class="toolbar-button" id="deleteButton" type="button" disabled title="删除选中元素">⌫ <span>删除</span></button>
+            </div>
+          </div>
+
+          <div class="life-controls" aria-label="小城时间控制">
+            <div class="clock-face"><span class="weather-symbol" id="weatherSymbol" aria-hidden="true">☀</span><div><strong id="cityClock">09:00</strong><small id="periodLabel">白天 · 微风正好</small></div></div>
+            <div class="period-switch" role="group" aria-label="切换时段">
+              <button type="button" data-period="day" aria-pressed="true">白天</button>
+              <button type="button" data-period="dusk" aria-pressed="false">黄昏</button>
+              <button type="button" data-period="night" aria-pressed="false">夜晚</button>
+            </div>
+            <button class="pause-button" id="pauseButton" type="button" aria-label="暂停小城时间" aria-pressed="false">Ⅱ <span>暂停</span></button>
+            <div class="day-progress" aria-hidden="true"><span id="dayProgress"></span></div>
+          </div>
+
+          <section class="weather-panel" aria-labelledby="weatherTitle">
+            <div class="weather-heading">
+              <div class="weather-heading-copy"><span id="weatherMark" aria-hidden="true">☀</span><div><p class="eyebrow">A LITTLE CHANGE IN THE SKY</p><h2 id="weatherTitle">晴日，适合慢慢走</h2></div></div>
+              <div class="weather-switch" role="group" aria-label="切换天气"><button type="button" data-weather="sunny" aria-pressed="true">☀ 晴天</button><button type="button" data-weather="rain" aria-pressed="false">☂ 小雨</button></div>
+            </div>
+            <div class="weather-bottom"><p id="weatherHint">风吹过花园，邻居们沿着小路散步。</p><button type="button" id="weatherAuto" aria-pressed="true">Ⅱ 暂停天气</button></div>
+            <div class="weather-options"><span id="weatherNext">下一场小雨，正在路上</span><button type="button" id="rainSound" aria-pressed="false">♪ 雨声：关</button><button type="button" id="motionButton" aria-pressed="false">动态：轻柔</button></div>
+            <div class="weather-progress" aria-hidden="true"><span id="weatherProgress"></span></div>
+          </section>
+
+          <section class="visitor-panel" aria-labelledby="visitorTitle">
+            <div class="visitor-heading"><div class="visitor-heading-copy"><span class="visitor-emblem" aria-hidden="true">⚑</span><div><p class="eyebrow">A LITTLE JOURNEY TO YOUR CITY</p><h2 id="visitorTitle">小城有来客</h2></div></div><span class="visitor-edition">第六章 · 相逢</span></div>
+            <div class="visitor-body"><div class="visitor-portrait" aria-hidden="true"><svg viewBox="0 0 64 70"><path d="M13 68Q12 39 32 39Q53 39 52 68" fill="#7d9889"/><path d="M21 45L42 61M43 44L22 61" stroke="#4d655d" stroke-width="2"/><circle cx="32" cy="26" r="13" fill="#e7c5a1"/><path d="M18 24Q16 8 32 8Q47 9 46 25" fill="#77624d"/><path d="M9 20Q32 13 55 20L52 24H12Z" fill="#d9b77c"/><path d="M19 19L22 6Q32 1 42 6L45 19" fill="#e8cb92"/><rect x="21" y="50" width="22" height="15" rx="3" fill="#f2e8d4" stroke="#586e63"/><circle cx="32" cy="57" r="5" fill="#748c80"/><circle cx="27" cy="28" r="1" fill="#6a5744"/><circle cx="37" cy="28" r="1" fill="#6a5744"/></svg></div><div class="visitor-copy"><strong id="visitorName">下一位来客 · 阿远</strong><p id="visitorActivity">花草旅人 · 喜欢花园、树荫和慢慢走</p><span id="visitorQuote">“想来看看，你种下的那片风景。”</span></div><button type="button" id="inviteVisitor" class="invite-button">邀请来客 <span>↗</span></button></div>
+            <ol class="visit-itinerary" id="visitItinerary" aria-label="来客行程"><li>乘船到访</li><li>沿路赏花</li><li>树下小憩</li><li>带走风景</li></ol>
+            <div class="visitor-bottom"><p id="visitorHint">接通码头的小路，就能邀请阿远。花园和树下长椅会让行程更丰富。</p><button id="cancelVisit" type="button" hidden>结束本次来访</button></div>
+            <div id="visitorPreparation" class="visitor-preparation"></div>
+          </section>
+
+          <section class="wishes-panel" aria-labelledby="wishesTitle">
+            <div class="wishes-heading"><div><span aria-hidden="true">♡</span><h2 id="wishesTitle">小城有心愿</h2></div><small id="wishesCount">小小心愿，慢慢实现</small></div>
+            <div class="wish-list" id="wishList"></div>
+            <div class="wish-guide" id="wishGuide" hidden></div>
+          </section>
+          <div class="stage-card" id="stageCard">
+            <div class="stage-header">
+              <div><span class="stage-label">A PLACE FOR EVERY LITTLE DREAM</span><span class="stage-divider"></span><span class="stage-subtitle">每一种生活，都有一座小城</span></div>
+              <span class="stage-coordinate" id="coordinateHint">0, 0</span>
+            </div>
+            <section class="season-toolbar" aria-label="小城四季"><div class="season-heading"><span id="seasonSymbol" aria-hidden="true">❀</span><div><p class="eyebrow">SAME LITTLE CITY, FOUR LITTLE SEASONS</p><h2 id="seasonTitle">花开的时候，慢一点走</h2></div></div><div class="season-switch" role="group" aria-label="选择季节"><button type="button" data-season-choice="spring" aria-pressed="true"><span aria-hidden="true">❀</span> 春</button><button type="button" data-season-choice="summer" aria-pressed="false"><span aria-hidden="true">☀</span> 夏</button><button type="button" data-season-choice="autumn" aria-pressed="false"><span aria-hidden="true">❧</span> 秋</button><button type="button" data-season-choice="winter" aria-pressed="false"><span aria-hidden="true">❄</span> 冬</button></div><p id="seasonHint" class="season-hint" role="status">树梢开着小花，风里都是新鲜的日常。</p></section>
+            <div class="roam-toolbar" aria-label="漫游与取景"><div class="camera-presets" role="group" aria-label="取景距离"><button type="button" data-camera-preset="overview" aria-pressed="true">全景</button><button type="button" data-camera-preset="street" aria-pressed="false">街角</button><button type="button" data-camera-preset="neighbor" aria-pressed="false">邻居</button></div><div class="roam-actions"><button type="button" id="takeRoamPhoto">◎ <span>拍一张</span></button><button type="button" id="openPersonalAlbum">▧ <span>我的相册</span><small id="personalPhotoBadge">0</small></button></div></div>
+            <div class="stage" id="stage" aria-label="小城画布">
+              <div class="ambient-glow"></div>
+              <svg id="citySvg" viewBox="-620 -370 1240 740" role="group" aria-label="掌心小城编辑画布">
+                <defs>
+                  <linearGradient id="skyGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#f8f0df" />
+                    <stop offset="1" stop-color="#e9ead3" />
+                  </linearGradient>
+                  <linearGradient id="waterGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#bed9cc" />
+                    <stop offset="1" stop-color="#8bb8ad" />
+                  </linearGradient>
+                  <linearGradient id="islandGradient" x1="0" y1="0" x2="0.9" y2="1">
+                    <stop offset="0" stop-color="#e6e0b6" />
+                    <stop offset="1" stop-color="#c8c68f" />
+                  </linearGradient>
+                  <linearGradient id="islandSideGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#b5b780" />
+                    <stop offset="1" stop-color="#8b986a" />
+                  </linearGradient>
+                  <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="18" stdDeviation="15" flood-color="#6d765e" flood-opacity="0.17" />
+                  </filter>
+                  <filter id="tinyShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="#5d6c57" flood-opacity="0.2" />
+                  </filter>
+                  <pattern id="surfaceDots" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="1.1" fill="#9ca76e" opacity="0.25" />
+                  </pattern>
+                </defs>
+                <rect class="sky-fill" x="-700" y="-450" width="1400" height="900" fill="url(#skyGradient)" />
+                <g class="celestial" aria-hidden="true">
+                  <circle id="sceneSun" cx="415" cy="-230" r="28" fill="#edca7b" opacity=".7" />
+                  <path id="sceneMoon" d="M430-256 A27 27 0 1 0 445-212 A25 25 0 0 1 430-256Z" fill="#fff0bc" opacity="0" />
+                  <g id="sceneStars" fill="#fff4d3" opacity="0"><circle cx="-400" cy="-258" r="2"/><circle cx="-240" cy="-300" r="1.5"/><circle cx="-30" cy="-319" r="2"/><circle cx="180" cy="-289" r="1.5"/><circle cx="302" cy="-225" r="2"/><circle cx="510" cy="-90" r="1.5"/><circle cx="-505" cy="-78" r="2"/><path d="M-330-178v10m-5-5h10M285-321v10m-5-5h10" stroke="#fff4d3" stroke-width="1.5"/></g>
+                </g>
+                <g id="world">
+                  <g class="map-shadow" filter="url(#softShadow)"><path d="M-438-61 C-418-171-276-248-88-260 C112-274 316-243 417-148 C488-81 476 52 388 137 C292 229 91 269-108 259 C-297 249-443 157-453 45 C-457 9-448-28-438-61Z" fill="#c5caa5" opacity="0.68" /></g>
+                  <path class="island-side" d="M-439-75 C-422-176-272-247-83-255 C120-263 313-233 416-145 C482-89 470 51 378 137 C282 225 85 258-108 248 C-292 238-433 155-447 48 C-452 12-448-39-439-75Z" fill="url(#islandSideGradient)" />
+                  <path class="island-surface" d="M-439-93 C-422-194-274-266-82-273 C116-280 314-250 417-163 C480-110 469 31 378 117 C283 204 86 238-108 228 C-291 218-433 136-447 29 C-451-6-448-55-439-93Z" fill="url(#islandGradient)" />
+                  <path class="surface-texture" d="M-439-93 C-422-194-274-266-82-273 C116-280 314-250 417-163 C480-110 469 31 378 117 C283 204 86 238-108 228 C-291 218-433 136-447 29 C-451-6-448-55-439-93Z" fill="url(#surfaceDots)" opacity="0.8" />
+                  <g class="water-lines" opacity="0.3">
+                    <path d="M-525-172 C-462-202-398-201-336-183" />
+                    <path d="M345-264 C405-282 474-264 528-229" />
+                    <path d="M386 207 C447 209 498 191 541 157" />
+                    <path d="M-526 164 C-470 183-422 187-375 174" />
+                  </g>
+                  <g id="seasonGround" aria-hidden="true" pointer-events="none"></g>
+                  <g id="gridLines" class="grid-lines" aria-hidden="true"></g>
+                  <g id="groundItems"></g>
+                  <g id="visitorBoat" pointer-events="none"></g>
+                  <g id="items"></g>
+                  <g id="placementPreview" class="placement-preview" aria-hidden="true" pointer-events="none"></g>
+                  <g id="buildEffects" aria-hidden="true" pointer-events="none"></g>
+                </g>
+                <g id="rainLayer" class="rain-layer" aria-hidden="true" pointer-events="none"></g>
+              </svg>
+              <div class="placement-cursor" id="placementCursor"><span></span><small>点击放置</small></div>
+              <div class="placement-feedback" id="placementFeedback" hidden aria-hidden="true"><svg viewBox="-76 -90 152 140"></svg><div><strong></strong><small></small></div></div>
+              <div class="stage-empty" id="stageEmpty"><div class="empty-orbit">✦</div><strong>从一片空地开始</strong><span>从左侧选择小屋、树木或小路，然后点击岛屿。</span></div>
+              <div class="scene-caption"><span class="caption-kicker">SLOW DAYS, LITTLE JOYS</span><strong id="sceneCityName">风从这里来</strong><span id="sceneLifeHint">小城的一天，开始了。</span></div>
+              <div class="resident-popover" id="residentPopover" hidden role="dialog" aria-labelledby="residentDetailName">
+                <button class="close-resident" id="closeResident" type="button" aria-label="关闭居民档案">×</button>
+                <span class="resident-detail-kicker">遇见一位邻居</span>
+                <div class="resident-detail-heading"><span id="residentAvatar" class="resident-avatar" aria-hidden="true"></span><div><strong id="residentDetailName">小林</strong><small id="residentHobby"></small></div></div>
+                <p class="resident-current"><i></i><span id="residentActivity"></span></p>
+                <blockquote id="residentThought"></blockquote>
+                <button type="button" class="follow-resident" id="followResident">跟着走走 <span>↗</span></button>
+              </div>
+              <div class="roam-status" id="roamStatus" hidden><span class="roam-status-icon" aria-hidden="true">⌁</span><div><strong id="roamResidentName"></strong><small id="roamResidentActivity"></small></div><button type="button" id="stopFollowing">停在这里 ×</button></div>
+              <div class="edit-toolbar" id="editToolbar" hidden aria-label="元素编辑工具栏">
+              <span class="edit-toolbar-label" id="editToolbarLabel">编辑元素</span>
+                <button type="button" id="focusSelection" data-edit-action="focus" title="靠近看看选中的角落" aria-label="靠近看看">⌖<small>靠近</small></button>
+                <button type="button" data-edit-action="connect" title="自动规划并接到街道">⌁<small>接路</small></button>
+                <button type="button" data-edit-action="move" title="拖动移动">✥<small>移动</small></button>
+                <button type="button" data-edit-action="rotate" title="旋转 90 度">↻<small>旋转</small></button>
+                <button type="button" data-edit-action="copy" title="复制元素">＋<small>复制</small></button>
+                <button type="button" data-edit-action="delete" title="删除元素">⌫<small>删除</small></button>
+              </div>
+              <div class="selection-note" id="selectionNote" hidden><strong id="selectionNoteTitle"></strong><span id="selectionNoteText"></span></div>
+              <div class="zoom-controls" aria-label="画布缩放控制">
+                <button type="button" id="zoomOut" aria-label="缩小">−</button>
+                <span id="zoomValue">100%</span>
+                <button type="button" id="zoomIn" aria-label="放大">+</button>
+                <button type="button" id="zoomReset" class="zoom-reset" aria-label="回到全景" title="回到全景">⌗ <small>全景</small></button>
+              </div>
+            </div>
+            <div class="stage-footer"><span><b id="itemCount">0</b> 个角落已被安放</span><button type="button" id="openStories">听听这一季的故事 ↓</button><span class="footer-note" id="lifeStatus">小城的一天，开始了。</span></div>
+            <section class="city-guide" id="cityGuide" aria-labelledby="guideHeading">
+              <div class="guide-heading"><span class="guide-emblem" aria-hidden="true">❧</span><div><span class="eyebrow">ONE LITTLE THING AT A TIME</span><h2 id="guideHeading">接下来，试一件小事</h2></div><button type="button" id="toggleGuide" aria-expanded="true" aria-controls="guideContent">收起 −</button></div>
+              <div id="guideContent"><ol class="guide-milestones" id="guideMilestones" aria-label="小城已有的日常"></ol><div class="guide-body"><div><strong id="guideTitle"></strong><p id="guideText"></p></div><button type="button" id="guideAction"></button></div><span class="guide-footnote">没有期限，也可以按自己的心意布置。</span></div>
+            </section>
+          </div>
+          <section class="stories-panel" id="storiesPanel" aria-labelledby="storiesTitle">
+            <div class="stories-heading"><div><p class="eyebrow">LITTLE PLACES, SHARED DAYS · 11</p><h2 id="storiesTitle">邻居的四季小故事</h2></div><span id="storiesCount">0 / 4 页回忆</span></div>
+            <div class="story-seasons" id="storySeasons" aria-label="四季故事进度"></div>
+            <div id="storyCard"></div>
+            <p class="stories-footnote">没有期限。换个季节，未完的故事也会等你回来。</p>
+          </section>
+        </section>
+
+        <aside class="sidebar archive-panel">
+          <div class="archive-topline"><span class="eyebrow">CITY ARCHIVE</span><span class="archive-number" id="archiveNumber">NO. 001</span><button type="button" id="closeMobileArchive" aria-label="收起小城档案">×</button></div>
+          <div class="city-stamp"><span class="stamp-mark">⌂</span><span>小城<br />档案</span></div>
+          <label class="field-label" for="cityName">给小城起个名字</label>
+          <div class="name-field"><input id="cityName" maxlength="18" value="风从这里来" autocomplete="off" /><span>✎</span></div>
+          <p class="name-hint">名字会自动保存，也会出现在导出的截图里。</p>
+
+          <div class="archive-divider"></div>
+          <div class="stats-grid">
+            <div class="stat-card"><span class="stat-icon">⌂</span><strong id="buildingCount">0</strong><small>建筑</small></div>
+            <div class="stat-card"><span class="stat-icon">✦</span><strong id="natureCount">0</strong><small>景观</small></div>
+            <div class="stat-card"><span class="stat-icon">◷</span><strong id="lastEdited">刚刚</strong><small>最后编辑</small></div>
+            <div class="stat-card"><span class="stat-icon">♧</span><strong id="residentCount">0</strong><small>居民</small></div>
+          </div>
+
+          <section class="personal-album-panel" aria-labelledby="personalAlbumTitle"><div class="residents-heading"><h3 id="personalAlbumTitle">我的小城相册</h3><span id="personalAlbumCount">0 张随手拍</span></div><p>只属于这座城，也只属于这一刻。</p><div id="personalAlbumPreview" class="personal-album-preview"></div><button type="button" class="album-open" id="openAlbumArchive">翻开我的相册 ↗</button></section>
+
+          <section class="travel-panel" aria-labelledby="travelTitle">
+            <div class="residents-heading"><h3 id="travelTitle">旅行纪念册</h3><span id="travelCount">0 张明信片</span></div>
+            <p class="travel-intro">来过的风景，会好好留在这里。</p>
+            <div id="travelList" class="travel-list" aria-live="polite"></div>
+            <button type="button" class="journal-more" id="travelMore" hidden>翻开更多明信片 ↓</button>
+          </section>
+
+          <section class="garden-panel" aria-labelledby="gardenTitle">
+            <div class="residents-heading"><h3 id="gardenTitle">照料一小块花园</h3><span>GROW AT YOUR PACE</span></div>
+            <div id="gardenCare"></div>
+          </section>
+
+          <section class="residents-panel" aria-label="小城居民">
+            <div class="residents-heading"><h3>住在这里的人</h3><span>NEIGHBORS</span></div>
+            <p class="resident-intro">点一下邻居，听听今天的小心情。</p>
+            <div id="residentList" class="resident-list"></div>
+            <p id="residentEmpty" class="resident-empty" hidden>放下一间小屋，就会有一位新邻居。<br />最多可以住进 5 位居民。</p>
+          </section>
+
+          <section class="journal-panel" aria-labelledby="journalTitle">
+            <div class="residents-heading"><h3 id="journalTitle">小城日记</h3><span id="journalCount">0 个片刻</span></div>
+            <p class="journal-intro">把第一次的小美好，收进日常。</p>
+            <div id="journalList" class="journal-list" aria-live="polite"></div>
+            <button type="button" class="journal-more" id="journalMore" hidden>翻开更多日记 ↓</button>
+          </section>
+          <div class="archive-note"><span class="note-quote">“</span><p id="dailyNote">你习以为常的日子，也是别人想来看看的一片风景。</p><span class="note-line"></span><small>掌心小城 · 生活手记</small></div>
+
+          <div class="selected-card" id="selectedCard" hidden>
+            <div class="selected-card-head"><span>已选中</span><button id="clearSelection" type="button" aria-label="取消选择">×</button></div>
+            <div class="selected-card-body"><span class="selected-symbol" id="selectedSymbol">⌂</span><div><strong id="selectedName">小屋</strong><small id="selectedPosition">坐标 0, 0</small></div></div>
+            <p class="selected-detail" id="selectedDetail"></p>
+            <div class="selected-actions">
+              <button type="button" data-edit-action="move">移动</button>
+              <button type="button" data-edit-action="rotate">旋转</button>
+              <button type="button" data-edit-action="copy">复制</button>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <nav class="mobile-city-tools" aria-label="手机建造工具"><button type="button" id="mobilePan" aria-pressed="false">✥<span>浏览</span></button><button type="button" id="mobileBuild" aria-expanded="false">⌂<span>建造</span></button><button type="button" id="mobileUndo" disabled>↶<span>撤销</span></button><button type="button" id="mobileRedo" disabled>↷<span>重做</span></button><button type="button" id="mobileArchive" aria-expanded="false">▤<span>档案</span></button><button type="button" id="mobileCollection">▧<span>收藏馆</span></button></nav>
+    <button class="mobile-drawer-shade" id="mobileDrawerShade" aria-label="收起面板" hidden></button>
+    <div class="mobile-build-caption" id="mobileBuildCaption" hidden><span id="mobileBuildText"></span><button id="cancelMobileBuild" type="button">完成</button></div>
+    <dialog class="collection-dialog" id="collectionDialog" aria-labelledby="collectionTitle">
+      <div class="collection-dialog-heading"><div><p class="eyebrow">A COLLECTION OF LITTLE WORLDS · 07</p><h2 id="collectionTitle">我的小城收藏馆</h2><p id="collectionSubtitle">原来的城，好好留着。新的日子，慢慢搭建。</p></div><button type="button" id="closeCollection" aria-label="关闭收藏馆">×</button></div>
+      <div id="collectionGallery">
+        <div class="collection-gallery-toolbar"><span id="collectionCount">1 座小城，各有各的日常</span><div><button type="button" id="importCityButton">↙ 导入小城</button><button type="button" id="galleryNewCity">＋ 新建小城</button></div></div>
+        <div class="city-gallery" id="cityGallery"></div>
+        <p class="collection-footnote">每座小城独立保存。导入会创建副本，备份文件也可以交给朋友继续建造。</p>
+      </div>
+      <form id="cityCreateForm" class="city-create-form" hidden>
+        <button class="collection-back" id="backToGallery" type="button">← 回到收藏馆</button>
+        <div id="templateChoices" class="template-choices"></div>
+        <div id="copyCitySummary" class="copy-city-summary" hidden></div>
+        <label for="newCityName">给这座小城起个名字</label><input id="newCityName" maxlength="18" autocomplete="off" required placeholder="让一个名字，成为故事的开始" />
+        <p id="createCityHint">所有初始布置都可以继续改建，原来的小城会保留。</p>
+        <div class="city-form-footer"><span id="cityFormError" role="status"></span><button type="submit" id="confirmCreateCity">收藏这座小城 ↗</button></div>
+      </form>
+      <p class="collection-error" id="collectionError" role="status" hidden></p>
+    </dialog>
+    <input id="importCityFile" type="file" accept=".json,application/json" hidden />
+    <dialog class="photo-dialog" id="photoDialog" aria-labelledby="photoTitle">
+      <div class="photo-heading"><div><span class="eyebrow">A POSTCARD FROM YOUR CITY</span><h2 id="photoTitle">留住这一刻的小城</h2></div><button type="button" id="closePhoto" aria-label="关闭截图预览">×</button></div>
+      <img id="photoPreview" alt="当前小城的截图预览" />
+      <div class="photo-footer"><span id="photoDescription">1600 × 960 · 包含居民与当前光线</span><a id="savePhoto" download="掌心小城.png">保存 PNG ↗</a></div>
+    </dialog>
+    <dialog class="album-dialog" id="albumDialog" aria-labelledby="albumTitle"><div class="album-heading"><div><p class="eyebrow">A WALK, A VIEW, A LITTLE MEMORY · 09</p><h2 id="albumTitle">我的小城相册</h2><p id="albumSubtitle"></p></div><button type="button" id="closeAlbum" class="round-close" aria-label="关闭我的相册">×</button></div><div class="album-topline"><span id="albumCapacity">0 / 20 张</span><button type="button" id="albumTakePhoto">◎ 回到小城拍一张</button></div><p class="album-undo" id="albumUndoNotice" hidden><span>已移出这张照片。</span><button type="button" id="undoDeletePhoto">撤销</button></p><div id="personalPhotoGrid" class="personal-photo-grid"></div><p class="album-footnote">照片与留言随这座小城保存，也会一起放进小城备份。</p></dialog>
+    <dialog class="roam-photo-dialog" id="roamPhotoDialog" aria-labelledby="roamPhotoTitle"><div class="roam-photo-heading"><div><p class="eyebrow">POSTCARDS TO MYSELF</p><h2 id="roamPhotoTitle">把这一刻，留给以后</h2></div><button type="button" id="closeRoamPhoto" class="round-close" aria-label="关闭照片">×</button></div><figure class="roam-photo-figure"><img id="roamPhotoImage" alt="拍摄时的小城风景"/><figcaption><strong id="roamPhotoCity"></strong><span id="roamPhotoMeta"></span></figcaption></figure><form id="roamPhotoForm"><label for="roamPhotoNote">给这一刻写一句话 <small id="roamPhotoNoteCount">0 / 80</small></label><textarea id="roamPhotoNote" maxlength="80" rows="2" placeholder="比如：今天的晚风，刚刚好。"></textarea><p id="roamPhotoError" class="photo-error" hidden role="status"></p><div class="roam-photo-footer"><button type="button" id="deletePersonalPhoto" class="delete-photo" hidden>移出相册</button><button type="button" id="downloadPersonalPhoto" class="download-photo">下载 PNG ↗</button><button type="submit" id="savePersonalPhoto">收进相册 ♡</button></div></form></dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./city-seasons.js" defer></script>
+    <script src="./city-roaming.js" defer></script>
+    <script src="./city-design.js" defer></script>
+    <script src="./city-stories.js" defer></script>
+    <script src="./city-life.js" defer></script>
+    <script src="./city-building.js" defer></script>
+    <script src="./city-guide.js" defer></script>
+    <script src="./city-weather.js" defer></script>
+    <script src="./city-visitors.js" defer></script>
+    <script src="./city-collection.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

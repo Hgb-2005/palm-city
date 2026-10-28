@@ -1,0 +1,12 @@
+{
+  "name": "palm-city",
+  "version": "14.0.0",
+  "private": true,
+  "description": "掌心小城：可以自由搭建、陪邻居散步、记录四季生活的网页小岛。",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

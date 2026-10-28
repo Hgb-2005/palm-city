@@ -1,0 +1,16 @@
+# Generated verification output and local data
+/artifacts/
+/node_modules/
+/coverage/
+/playwright-report/
+/test-results/
+*.log
+*.tmp
+*.bak
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+__pycache__/
