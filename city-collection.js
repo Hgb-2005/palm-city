@@ -1,8 +1,8 @@
 (function (root, factory) {
-  const api = factory(typeof module === "object" && module.exports ? require("./city-roaming.js") : root.PalmCityRoaming, typeof module === "object" && module.exports ? require("./city-seasons.js") : root.PalmCitySeasons, typeof module === "object" && module.exports ? require("./city-stories.js") : root.PalmCityStories);
+  const api = factory(typeof module === "object" && module.exports ? require("./city-roaming.js") : root.PalmCityRoaming, typeof module === "object" && module.exports ? require("./city-seasons.js") : root.PalmCitySeasons, typeof module === "object" && module.exports ? require("./city-stories.js") : root.PalmCityStories, typeof module === "object" && module.exports ? require("./city-life.js") : root.PalmCityLife);
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.PalmCityCollection = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (Roaming, Seasons, Stories) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Roaming, Seasons, Stories, Life) {
   "use strict";
   const TYPES = new Set(["house", "shop", "tree", "road", "flower", "water", "bench", "lamp", "plaza", "pavilion", "garden", "dock"]);
   const FORMAT = "palm-sized-city";
@@ -83,6 +83,7 @@
     }
     const data = clone(source);
     Stories.validateProgress(data.progress?.stories);
+    Life.validateBonds(data.progress?.bonds);
     if (data.season !== undefined && !Seasons.isSeason(data.season)) throw new Error("小城的季节记录无效，请选择完整的小城备份。");
     data.items = data.items.map((item) => ({ id: item.id, type: item.type, x: item.x,
       y: data.schema === 2 && item.type === "road" ? Math.round((item.y - 12) / 48) * 48 + 12 : item.y,

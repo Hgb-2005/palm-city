@@ -1620,7 +1620,12 @@
       document.getElementById("residentDetailName").textContent = selected.name;
       document.getElementById("residentHobby").textContent = selected.hobby;
       document.getElementById("residentActivity").textContent = life.activity(selected);
+      document.getElementById("residentAmenities").textContent = life.communityStatus(selected).summary;
       document.getElementById("residentThought").textContent = `“${life.speech(selected) || PalmCitySeasons.residentLine(state.season, selected, environment.weather.kind)}”`;
+      const connections = life.relationships(selected);
+      document.getElementById("residentConnections").textContent = connections.length
+        ? connections.map(bond => `${bond.name} · ${bond.level} · 相遇 ${bond.count} 次`).join("\n")
+        : "邻里记忆：沿着连通的小路出门，慢慢认识新朋友。";
       document.getElementById("residentAvatar").style.setProperty("--resident-color", selected.color);
     }
   }

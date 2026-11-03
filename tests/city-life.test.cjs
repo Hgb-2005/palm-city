@@ -28,6 +28,28 @@ test("all three homes connect through cardinal road neighbors to a shop", () => 
   }
 });
 
+test("resident amenities reflect reachable shops, rest spots, and shared plazas", () => {
+  const simulation = createSimulation();
+  const items = [
+    ...street(),
+    { id: 50, type: "tree", x: 0, y: -84 },
+    { id: 51, type: "bench", x: 0, y: -36 },
+    { id: 52, type: "plaza", x: 96, y: -36 },
+    { id: 53, type: "road", x: 96, y: 12 },
+  ];
+  simulation.sync(items);
+  const person = simulation.residents.find(resident => resident.homeId === 1);
+  const complete = simulation.communityStatus(person);
+  assert.equal(complete.shopping, true);
+  assert.equal(complete.resting, true);
+  assert.equal(complete.meeting, true);
+  assert.match(complete.summary, /日常配套 3\/3/);
+  simulation.sync(items.filter(item => ![4, 50, 51, 52, 53].includes(item.id)));
+  const sparse = simulation.communityStatus(simulation.residents.find(resident => resident.homeId === 1));
+  assert.deepEqual([sparse.shopping, sparse.resting, sparse.meeting], [false, false, false]);
+  assert.match(sparse.summary, /日常配套 0\/3/);
+});
+
 test("a resident goes shopping and returns home without leaving the road route", () => {
   const simulation = createSimulation();
   simulation.sync(street());

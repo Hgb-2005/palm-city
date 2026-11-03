@@ -75,7 +75,17 @@
     if (!value || typeof value !== "object") value = {};
     const clean = (list) => [...new Set(Array.isArray(list) ? list.filter((id) => typeof id === "string" && /^(shade|meeting|lamplight):\d+$/.test(id)).slice(0, 300) : [])];
     const identities = Array.isArray(value.identities) ? value.identities.filter((entry) => entry && Number.isFinite(entry.homeId) && Number.isInteger(entry.slot) && entry.slot >= 0 && entry.slot < people.length).slice(0, 5).map((entry) => ({ homeId: entry.homeId, slot: entry.slot })) : [];
-    return { accepted: clean(value.accepted), completed: clean(value.completed), identities, stories: Stories.cleanProgress(value.stories) };
+    const bonds = [];
+    for (const bond of Array.isArray(value.bonds) ? value.bonds.slice(0, 300) : []) {
+      if (!bond || !Number.isSafeInteger(bond.a) || !Number.isSafeInteger(bond.b) || bond.a <= 0 || bond.b <= bond.a || !Number.isSafeInteger(bond.count) || bond.count < 1 || bond.count > 1000000) continue;
+      if (!bonds.some(item => item.a === bond.a && item.b === bond.b)) bonds.push({a: bond.a, b: bond.b, count: bond.count});
+    }
+    return { accepted: clean(value.accepted), completed: clean(value.completed), identities, stories: Stories.cleanProgress(value.stories), bonds };
+  }
+
+  function validateBonds(value) {
+    if (value === undefined) return;
+    if (!Array.isArray(value) || value.length > 300 || cleanProgress({bonds: value}).bonds.length !== value.length) throw new Error("邻里关系数据不完整，请选择原始小城备份。");
   }
 
   function createSimulation(savedProgress = {}) {
@@ -93,8 +103,70 @@
     let progress = cleanProgress(savedProgress);
     let events = [];
     let reservedFacilities = new Set();
+    let communityCacheKey = "";
+    const communityCache = new Map();
     const recorded = new Set();
     const greetings = new Map();
+
+    function encounter(a, b) {
+      const [first, second] = [a.homeId, b.homeId].sort((x, y) => x - y);
+      const pair = `${first}:${second}`;
+      if (elapsed - (greetings.get(pair) ?? -30) < 24) return null;
+      greetings.set(pair, elapsed);
+      let bond = progress.bonds.find(item => item.a === first && item.b === second);
+      if (!bond) { bond = {a: first, b: second, count: 0}; progress.bonds.push(bond); }
+      bond.count = Math.min(1000000, bond.count + 1);
+      if ([1, 3, 8].includes(bond.count)) events.push({
+        id: `bond:${pair}:${bond.count}`, kind: "friendship",
+        title: bond.count === 1 ? "记住了彼此的名字" : bond.count === 3 ? "又在路上遇见你" : "小城里，有了老朋友",
+        text: `${a.name}和${b.name}${bond.count === 1 ? "第一次停下来打招呼" : `已经相遇了 ${bond.count} 次` }。${bond.count >= 8 ? "平常的路，因为熟悉的人变得亲切。" : "下一次见面，就不再陌生。"}`,
+        quote: bond.count >= 8 ? "老朋友，今天也一起慢慢走。" : "你好呀，很高兴在这里遇见你。",
+      });
+      return bond;
+    }
+
+    function relationships(resident) {
+      return progress.bonds.filter(bond => bond.a === resident.homeId || bond.b === resident.homeId).flatMap(bond => {
+        const neighbor = residents.find(other => other.homeId === (bond.a === resident.homeId ? bond.b : bond.a));
+        return neighbor ? [{name: neighbor.name, count: bond.count, level: bond.count >= 8 ? "老朋友" : bond.count >= 3 ? "熟悉的邻居" : "初次相识"}] : [];
+      }).sort((a, b) => b.count - a.count);
+    }
+
+    function communityStatus(resident) {
+      if (!resident?.home) return { shopping: false, resting: false, meeting: false, summary: "还没有接通的日常配套" };
+      const cacheKey = `${geometryKey}:${night}`;
+      if (cacheKey !== communityCacheKey) { communityCacheKey = cacheKey; communityCache.clear(); }
+      if (communityCache.has(resident.homeId)) return communityCache.get(resident.homeId);
+      function reachableRoads(home) {
+        const queue = entrances(home, network.roads), reached = new Set(queue.map(road => road.id));
+        for (let index = 0; index < queue.length; index++) {
+          for (const road of network.graph.get(queue[index].id) || []) {
+            if (!reached.has(road.id)) { reached.add(road.id); queue.push(road); }
+          }
+        }
+        return reached;
+      }
+      const homeRoads = reachableRoads(resident.home);
+      const canReach = (roads, targets) => targets.some(target => entrances(target, network.roads).some(road => roads.has(road.id)));
+      const shops = layout.filter(item => item.type === "shop");
+      const restingSpots = layout.filter(item => item.type === "bench" && (
+        nearby(item, "tree", 105) || night && nearby(item, "lamp", 100)
+      ));
+      const plazas = layout.filter(item => item.type === "plaza");
+      const otherHomes = residents.filter(other => other.homeId !== resident.homeId);
+      const shopping = canReach(homeRoads, shops);
+      const resting = canReach(homeRoads, restingSpots);
+      const otherRoads = otherHomes.map(other => reachableRoads(other.home));
+      const meeting = plazas.some(plaza => canReach(homeRoads, [plaza])
+        && otherRoads.some(roads => canReach(roads, [plaza])));
+      const points = [shopping, resting, meeting].filter(Boolean).length;
+      const status = {
+        shopping, resting, meeting,
+        summary: `日常配套 ${points}/3 · 商店 ${shopping ? "已接路" : "未接路"} · 休憩点 ${resting ? "可到达" : "未接通"} · 邻里广场 ${meeting ? "可相约" : "未接通"}`,
+      };
+      communityCache.set(resident.homeId, status);
+      return status;
+    }
 
     function wishFor(resident) {
       const type = wishTypes[resident.slot % 3];
@@ -417,13 +489,12 @@
         const segmentA = [a.route[a.step - 1]?.roadId, a.route[a.step]?.roadId];
         const segmentB = [b.route[b.step - 1]?.roadId, b.route[b.step]?.roadId];
         if (segmentA.some((id) => id == null) || segmentB.some((id) => id == null) || !segmentA.some((id) => segmentB.includes(id))) continue;
-        const pair = [a.homeId, b.homeId].sort((x, y) => x - y).join(":");
-        if (elapsed - (greetings.get(pair) ?? -30) < 24) continue;
-        greetings.set(pair, elapsed);
+        const bond = encounter(a, b);
+        if (!bond) continue;
         for (const [resident, neighbor] of [[a, b], [b, a]]) {
           resident.greetingUntil = elapsed + 1.8;
           resident.greetingSide = Math.sign(neighbor.x - resident.x) || (resident.homeId < neighbor.homeId ? 1 : -1);
-          resident.speech = `你好呀，${neighbor.name}`;
+          resident.speech = bond.count >= 8 ? `老朋友${neighbor.name}，一起走走吧` : bond.count >= 3 ? `${neighbor.name}，又见面啦` : `你好呀，${neighbor.name}`;
           resident.speechUntil = elapsed + 2.5;
         }
       }
@@ -475,6 +546,7 @@
               const owner = resident.plan.wishId ? resident : partner.plan.wishId ? partner : resident;
               const other = owner === resident ? partner : resident;
               emitMemory(owner, "meeting", other);
+              encounter(owner, other);
               resident.used = true; partner.used = true;
               resident.wait = 7; partner.wait = 7;
             }
@@ -528,7 +600,7 @@
     }
 
     return {
-      sync, tick, activity, moment, wishes, acceptWish, setNight, setWeather, story, acceptStory, setStoryContext,
+      sync, tick, activity, moment, wishes, acceptWish, setNight, setWeather, story, acceptStory, setStoryContext, relationships, communityStatus,
       setReservedFacilities(ids) { reservedFacilities = new Set(ids); },
       progress: () => cleanProgress(progress),
       restoreProgress(value) { progress = cleanProgress(value); layoutKey = ""; },
@@ -538,5 +610,5 @@
     };
   }
 
-  return { createSimulation, createNetwork, findRoute, entrances, doorPoint, cleanProgress };
+  return { createSimulation, createNetwork, findRoute, entrances, doorPoint, cleanProgress, validateBonds };
 });
