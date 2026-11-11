@@ -102,6 +102,7 @@
     let storyContextKey = "";
     let progress = cleanProgress(savedProgress);
     let events = [];
+    let sceneJourney = null;
     let reservedFacilities = new Set();
     let communityCacheKey = "";
     const communityCache = new Map();
@@ -360,11 +361,104 @@
       if (next === raining) return;
       raining = next;
       for (const resident of residents) {
+        if (sceneJourney?.residentId === resident.id) continue;
         if (raining) respondToRain(resident);
         else if (resident.rainPlan) respondToRain(resident, true);
       }
       layoutKey = "";
       sync(layout);
+    }
+
+    function startEncounter({ id, residentId, targetId, title, text, quote, choiceLabel, kind } = {}) {
+      if (sceneJourney || typeof id !== "string") return false;
+      const resident = residents.find((item) => item.id === residentId);
+      const target = layout.find((item) => item.id === targetId);
+      if (!resident?.home || !target) return false;
+      const route = publicRoute(resident.home, [target], "encounter");
+      if (!route) return false;
+      sceneJourney = {
+        id: id.slice(0, 160),
+        residentId,
+        targetId,
+        title: typeof title === "string" ? title.slice(0, 60) : "今天的一幕",
+        text: typeof text === "string" ? text.slice(0, 160) : "",
+        quote: typeof quote === "string" ? quote.slice(0, 100) : "",
+        choiceLabel: typeof choiceLabel === "string" ? choiceLabel.slice(0, 40) : "沿小路去看看",
+        kind: ["rain", "sunny", "night"].includes(kind) ? kind : "sunny",
+        targetType: target.type,
+      };
+      resident.plan = { ...route, kind: "encounter", encounterId: sceneJourney.id };
+      resident.rainPlan = null;
+      resident.phase = "encounter-outbound";
+      resident.route = route.points;
+      resident.step = 1;
+      resident.x = resident.route[0].x;
+      resident.y = resident.route[0].y;
+      resident.visible = true;
+      resident.wait = 0;
+      resident.stay = 0;
+      resident.used = false;
+      resident.carrying = false;
+      resident.speech = sceneJourney.choiceLabel;
+      resident.speechUntil = elapsed + 6;
+      return true;
+    }
+
+    function cancelEncounter() {
+      if (!sceneJourney) return false;
+      const resident = residents.find((item) => item.id === sceneJourney.residentId);
+      sceneJourney = null;
+      if (resident) {
+        resident.plan = null;
+        resident.route = [];
+        resident.step = 0;
+        resident.speech = "";
+        resident.speechUntil = 0;
+        atHome(resident, 1.5 + resident.slot);
+      }
+      layoutKey = "";
+      sync(layout);
+      return true;
+    }
+
+    function tickEncounter(resident, dt) {
+      if (!sceneJourney || resident.id !== sceneJourney.residentId) return;
+      if (resident.phase === "encounter-outbound") {
+        if (walk(resident, dt)) {
+          resident.phase = "encounter-resting";
+          resident.stay = 0;
+          resident.speech = sceneJourney.kind === "rain" ? "这里听雨，刚刚好。" : "到了，就在这里待一会儿。";
+          resident.speechUntil = elapsed + 7;
+        }
+        return;
+      }
+      if (resident.phase === "encounter-resting") {
+        resident.stay += dt;
+        if (!resident.used && resident.stay >= 1.5) {
+          resident.used = true;
+          events.push({
+            id: sceneJourney.id,
+            kind: "encounter",
+            encounterKind: sceneJourney.targetType || "",
+            title: sceneJourney.title,
+            text: sceneJourney.text,
+            quote: sceneJourney.quote,
+          });
+        }
+        if (resident.stay >= 4.6) {
+          resident.phase = "encounter-returning";
+          resident.route = [...resident.plan.points].reverse();
+          resident.step = 1;
+          resident.wait = 0;
+        }
+        return;
+      }
+      if (resident.phase === "encounter-returning" && walk(resident, dt)) {
+        sceneJourney = null;
+        resident.trips++;
+        atHome(resident, 3);
+        layoutKey = "";
+      }
     }
 
     function sync(items) {
@@ -414,6 +508,9 @@
       const chapter = story();
       if (chapter.ready && ["ready", "visiting"].includes(chapter.status) && !assigned.has(chapter.residentId)) assigned.set(chapter.residentId, chapter.plan);
       residents.forEach((resident) => {
+        if (sceneJourney?.residentId === resident.id) {
+          return;
+        }
         const home = resident.home;
         const oldHome = resident.previousHome;
         let plan = assigned.get(resident.id);
@@ -505,6 +602,7 @@
       if (resident.phase === "resting" && resident.plan?.storyId === "spring") return "watching";
       if (resident.phase === "resting" && resident.plan?.storyId === "winter") return "tea";
       if (resident.phase === "resting") return resident.slot % 2 ? "reading" : "tea";
+      if (resident.phase === "encounter-resting") return resident.slot % 2 ? "reading" : "tea";
       if (resident.phase === "shopping") return "shopping";
       if (resident.phase === "returning" && resident.carrying) return "carrying";
       return "walking";
@@ -515,6 +613,10 @@
       elapsed += dt;
       if (!raining) greetNeighbors();
       for (const resident of residents) {
+        if (sceneJourney?.residentId === resident.id) {
+          tickEncounter(resident, dt);
+          continue;
+        }
         if (raining || resident.rainPlan) {
           if (resident.phase === "sheltered" || resident.phase === "home") continue;
           if (resident.rainPlan && walk(resident, dt)) {
@@ -585,6 +687,9 @@
     }
 
     function activity(resident) {
+      if (resident.phase === "encounter-outbound") return `沿小路去${sceneJourney ? sceneJourney.choiceLabel.replace(/^去/, "") : "约定的地方"}`;
+      if (resident.phase === "encounter-resting") return sceneJourney?.kind === "rain" ? "听着屋檐上的雨声" : "在今天的街角停一会儿";
+      if (resident.phase === "encounter-returning") return "带着今天的小事慢慢回家";
       if (resident.phase === "rain-walk") return "撑伞沿小路去凉亭";
       if (resident.phase === "rain-home") return "撑伞慢慢走回家";
       if (resident.phase === "rain-returning") return "雨停了，沿路回家收伞";
@@ -601,7 +706,10 @@
 
     return {
       sync, tick, activity, moment, wishes, acceptWish, setNight, setWeather, story, acceptStory, setStoryContext, relationships, communityStatus,
+      startEncounter,
+      cancelEncounter,
       setReservedFacilities(ids) { reservedFacilities = new Set(ids); },
+      hasEncounterJourney: () => !!sceneJourney,
       progress: () => cleanProgress(progress),
       restoreProgress(value) { progress = cleanProgress(value); layoutKey = ""; },
       drainEvents() { const pending = events; events = []; return pending; },

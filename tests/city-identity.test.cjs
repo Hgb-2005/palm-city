@@ -74,7 +74,7 @@ test("blended priorities produce a balanced identity and always keep two to four
   assert.ok(identity.districts.length >= 3);
   assert.ok(identity.traits.length >= 2 && identity.traits.length <= 4);
   assert.match(identity.summary, /同样鲜明|主路网之外|最先/);
-  assert.match(identity.signature, /^PC17-[0-9A-Z]{7}$/);
+  assert.match(identity.signature, /^PC18-[0-9A-Z]{7}$/);
 });
 
 test("identity is deterministic across item order and does not mutate inputs", () => {

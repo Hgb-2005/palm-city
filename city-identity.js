@@ -105,7 +105,7 @@
       season,
       weather,
     ].join("::");
-    return `PC17-${hashText(source).toString(36).toUpperCase().padStart(7, "0")}`;
+    return `PC18-${hashText(source).toString(36).toUpperCase().padStart(7, "0")}`;
   }
 
   const gridX = (road) => Math.round(road.x / STEP);
