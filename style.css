@@ -1351,7 +1351,7 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .scene-identity-line * { transition: none !important; animation: none !important; }
 }
 
-/* Chapter 18 — one small scene, walked together every day. */
+/* Chapter 19 — answer a neighbour's letter, then live with the choice. */
 .city-toolbar { order: -6; }
 .life-controls { order: -5; }
 .encounter-panel { order: -4; }
@@ -1598,6 +1598,320 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   font-family: ui-monospace, "Cascadia Mono", monospace;
   font-size: 8px;
 }
+.letter-card {
+  isolation: isolate;
+}
+.letter-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 27px, color-mix(in srgb, #c58a72 11%, transparent) 27px 28px, transparent 28px),
+    repeating-linear-gradient(0deg, transparent 0 25px, color-mix(in srgb, var(--encounter-accent) 6%, transparent) 25px 26px);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.letter-copy {
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--encounter-accent) 12%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--encounter-paper) 58%, transparent);
+}
+.letter-options {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.letter-option {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 20px;
+  grid-template-areas:
+    "number copy arrow"
+    ". effect effect"
+    ". tradeoff tradeoff";
+  gap: 7px 9px;
+  align-items: start;
+  min-width: 0;
+  min-height: 92px;
+  padding: 11px 12px;
+  border: 1px solid var(--encounter-border);
+  border-radius: 12px;
+  color: var(--encounter-ink);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--encounter-paper) 88%, var(--encounter-soft)), var(--encounter-button));
+  text-align: left;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.letter-option:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--encounter-accent) 55%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--encounter-paper) 90%, white), color-mix(in srgb, var(--encounter-soft) 76%, var(--encounter-paper)));
+  transform: translateY(-2px);
+}
+.letter-option:disabled { cursor: not-allowed; opacity: .58; }
+.letter-option-number {
+  grid-area: number;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--encounter-accent) 35%, transparent);
+  border-radius: 50%;
+  color: var(--encounter-accent);
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 8px;
+}
+.letter-option-copy {
+  grid-area: copy;
+  display: block;
+  min-width: 0;
+}
+.letter-option-copy small {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--encounter-accent);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.letter-option-copy strong {
+  display: block;
+  color: var(--encounter-ink);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.letter-option-copy p {
+  margin: 4px 0 0;
+  color: var(--encounter-muted);
+  font-size: 8px;
+  line-height: 1.65;
+}
+.letter-option > b {
+  grid-area: arrow;
+  color: var(--encounter-accent);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+.letter-effect,
+.letter-tradeoff {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: var(--encounter-muted);
+  font-size: 8px;
+  line-height: 1.6;
+}
+.letter-option > .letter-effect,
+.letter-option > .letter-tradeoff {
+  width: 100%;
+  margin: 0;
+}
+.letter-option > .letter-effect { grid-area: effect; }
+.letter-option > .letter-tradeoff { grid-area: tradeoff; }
+.letter-effect {
+  background: color-mix(in srgb, var(--encounter-soft) 62%, transparent);
+}
+.letter-tradeoff {
+  background: color-mix(in srgb, #efd9cb 52%, transparent);
+}
+.encounter-panel[data-kind="night"] .letter-tradeoff {
+  background: color-mix(in srgb, #745f48 45%, transparent);
+}
+.letter-effect i,
+.letter-tradeoff i {
+  flex: 0 0 auto;
+  color: var(--encounter-accent);
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+.letter-tradeoff i { color: color-mix(in srgb, #ad765b 78%, var(--encounter-ink)); }
+.encounter-panel[data-kind="night"] .letter-tradeoff i { color: #e2bc94; }
+.letter-decision {
+  position: relative;
+  z-index: 1;
+  margin: 11px 0 8px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--encounter-accent);
+  border-radius: 0 9px 9px 0;
+  color: var(--encounter-ink);
+  background: color-mix(in srgb, var(--encounter-soft) 60%, transparent);
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.letter-checklist {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.letter-checklist li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 1px solid var(--encounter-border);
+  border-radius: 9px;
+  color: var(--encounter-muted);
+  background: color-mix(in srgb, var(--encounter-button) 70%, transparent);
+}
+.letter-checklist li > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--encounter-accent) 25%, transparent);
+  border-radius: 50%;
+  color: var(--encounter-accent);
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 7px;
+}
+.letter-checklist li.is-done {
+  color: var(--encounter-ink);
+  background: color-mix(in srgb, var(--encounter-soft) 70%, transparent);
+}
+.letter-checklist li.is-done > span {
+  color: color-mix(in srgb, var(--encounter-paper) 88%, white);
+  border-color: var(--encounter-accent);
+  background: var(--encounter-accent);
+}
+.letter-checklist strong,
+.letter-checklist small { display: block; }
+.letter-checklist strong { color: inherit; font-size: 9px; line-height: 1.45; }
+.letter-checklist small { margin-top: 2px; font-size: 7px; line-height: 1.55; }
+.letter-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 11px;
+}
+.letter-actions button {
+  min-width: 0;
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 1px solid var(--encounter-border);
+  border-radius: 10px;
+  color: var(--encounter-ink);
+  background: var(--encounter-button);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.letter-actions button:last-child {
+  color: color-mix(in srgb, var(--encounter-paper) 88%, white);
+  border-color: var(--encounter-accent);
+  background: var(--encounter-accent);
+}
+.letter-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+.letter-actions button:not(:disabled):hover { transform: translateY(-1px); }
+.letter-echo,
+.letter-next-echo {
+  position: relative;
+  z-index: 1;
+  margin: 0 12px 10px;
+  padding: 10px 12px 11px;
+  border: 1px dashed color-mix(in srgb, var(--encounter-accent) 38%, transparent);
+  border-radius: 10px;
+  color: var(--encounter-muted);
+  background: color-mix(in srgb, var(--encounter-paper) 60%, transparent);
+}
+.letter-echo > span,
+.letter-next-echo > span {
+  display: block;
+  color: var(--encounter-accent);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.letter-echo strong,
+.letter-next-echo strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--encounter-ink);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.letter-echo p,
+.letter-next-echo p {
+  margin: 4px 0 0;
+  font-size: 8px;
+  line-height: 1.65;
+}
+.letter-result-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+.letter-result-grid section {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--encounter-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--encounter-button) 74%, transparent);
+}
+.letter-result-grid section:first-child {
+  border-color: color-mix(in srgb, var(--encounter-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--encounter-soft) 68%, transparent);
+}
+.letter-result-grid span {
+  display: block;
+  color: var(--encounter-muted);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+.letter-result-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--encounter-ink);
+  font-size: 10px;
+}
+.letter-result-grid p {
+  margin: 4px 0 0;
+  color: var(--encounter-muted);
+  font-size: 8px;
+  line-height: 1.65;
+}
+.letter-next-echo {
+  margin: 10px 0 0;
+  border-style: solid;
+  border-color: color-mix(in srgb, #b98568 35%, transparent);
+  background: color-mix(in srgb, #f0dfd3 52%, var(--encounter-paper));
+}
+.encounter-panel[data-kind="night"] .letter-next-echo {
+  background: color-mix(in srgb, #745f48 42%, var(--encounter-paper));
+}
+.letter-next-echo > span { color: color-mix(in srgb, #ad765b 78%, var(--encounter-ink)); }
+.encounter-panel[data-kind="night"] .letter-next-echo > span { color: #e2bc94; }
+.letter-complete-actions {
+  align-items: stretch;
+}
+.letter-complete-actions button:first-child {
+  flex: 1 1 240px;
+}
 .encounter-recovery {
   position: relative;
   z-index: 1;
@@ -1836,6 +2150,18 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .encounter-choice-line { font-size: 9px; }
   .encounter-focus-actions button,
   .encounter-complete-foot button { min-height: 44px; padding: 8px 10px; font-size: 8px; }
+  .letter-option { padding: 10px; }
+  .letter-option-copy strong { font-size: 10px; }
+  .letter-option-copy p,
+  .letter-effect,
+  .letter-tradeoff,
+  .letter-result-grid p { font-size: 8px; }
+  .letter-actions { grid-template-columns: minmax(0, 1fr); }
+  .letter-actions button { min-height: 46px; }
+  .letter-result-grid { grid-template-columns: minmax(0, 1fr); }
+  .letter-echo,
+  .letter-next-echo { margin-inline: 8px; }
+  .letter-complete-actions button { flex: 1 1 180px; }
   .encounter-card.is-complete .encounter-story { max-width: 100%; }
   .encounter-card.is-complete > blockquote { max-width: calc(100% - 64px); }
   .encounter-complete-mark { top: 49px; right: 22px; width: 47px; height: 54px; font-size: 24px; }
@@ -1864,6 +2190,25 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .encounter-foot span:first-child { max-width: 62%; }
   .encounter-complete-mark { display: none; }
   .encounter-card.is-complete > blockquote { max-width: 100%; }
+  .letter-option {
+    grid-template-columns: 28px minmax(0, 1fr) 16px;
+    gap: 6px 7px;
+    padding: 9px;
+  }
+  .letter-option-number { width: 28px; height: 28px; }
+  .letter-effect,
+  .letter-tradeoff {
+    display: block;
+    padding: 7px 8px;
+  }
+  .letter-effect i,
+  .letter-tradeoff i {
+    display: block;
+    margin-bottom: 2px;
+  }
+  .letter-echo,
+  .letter-next-echo { margin-inline: 5px; }
+  .letter-complete-actions button { flex-basis: 100%; }
   .encounter-focus-actions button,
   .encounter-complete-foot button { flex: 1 1 auto; }
 }
@@ -1877,6 +2222,10 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .encounter-complete-meta { gap: 4px; }
   .encounter-complete-meta span { padding-inline: 6px; font-size: 6.5px; }
   .encounter-progress strong { font-size: 6.5px; }
+  .letter-option-copy p { font-size: 7.5px; }
+  .letter-effect,
+  .letter-tradeoff { font-size: 7.5px; }
+  .letter-result-grid strong { font-size: 9.5px; }
 }
 
 @media (max-width: 370px) {
@@ -1891,6 +2240,13 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .encounter-progress li { padding-left: 15px; }
   .encounter-progress li span { display: none; }
   .encounter-progress strong { font-size: 6px; }
+  .letter-option-copy strong { font-size: 9.5px; }
+  .letter-option-copy p { font-size: 7px; }
+  .letter-effect,
+  .letter-tradeoff,
+  .letter-result-grid p,
+  .letter-echo p,
+  .letter-next-echo p { font-size: 7px; }
   .is-scene-focus.is-viewing .stage { height: 300px; }
 }
 
@@ -1908,6 +2264,22 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
   .encounter-options strong { font-size: 7px; }
   .encounter-progress li { padding-inline: 3px; text-align: center; }
   .encounter-progress strong { overflow: visible; font-size: 6px; line-height: 1.45; text-overflow: clip; white-space: normal; }
+  .letter-option {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    grid-template-areas:
+      "copy arrow"
+      "effect effect"
+      "tradeoff tradeoff";
+    padding: 8px;
+  }
+  .letter-option-number { display: none; }
+  .letter-option-copy strong { font-size: 9px; }
+  .letter-effect,
+  .letter-tradeoff { padding: 6px 7px; }
+  .letter-checklist li { grid-template-columns: 24px minmax(0, 1fr); gap: 6px; padding-inline: 7px; }
+  .letter-checklist li > span { width: 24px; height: 24px; }
+  .letter-complete-actions { flex-direction: column; }
+  .letter-complete-actions button { width: 100%; }
   .encounter-focus-actions,
   .encounter-complete-foot { flex-direction: column; }
   .encounter-focus-actions button,

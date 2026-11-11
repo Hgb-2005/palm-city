@@ -1,8 +1,8 @@
 {
   "name": "palm-city",
-  "version": "18.0.0",
+  "version": "19.0.0",
   "private": true,
-  "description": "掌心小城：可以自由搭建、陪邻居散步、记录四季生活的网页小岛。",
+  "description": "掌心小城：收下邻居来信，做出取舍，建好新地方，让选择每天在城里留下回响。",
   "scripts": {
     "test": "node --test"
   },

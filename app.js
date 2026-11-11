@@ -5,6 +5,7 @@
   const ROAD_ORIGIN_Y = 12;
   let life = PalmCityLife.createSimulation();
   let encounters = PalmCityEncounters.createEncounters();
+  let letters = PalmCityLetters.createLetters();
   let environment = PalmCityWeather.createEnvironment();
   let visitors = PalmCityVisitors.createSimulation();
   const collection = PalmCityCollection.createRepository(window.indexedDB);
@@ -161,6 +162,7 @@
   let cityIdentity = null, cityIdentityKey = "";
   let encounterUiKey = "", encounterRecoveryNotice = "";
   let lastEncounterResult = null;
+  let letterTargetId = null;
 
   function cloneItems(items) { return items.map((item) => ({ ...item })); }
 
@@ -187,6 +189,7 @@
       life.restoreProgress(saved.progress);
       visitors.restore(saved.visitors);
       encounters.restore(saved.encounters);
+      letters.restore(saved.letters);
       state.photos = PalmCityRoaming.cleanPhotos(saved.photos);
       state.season = PalmCitySeasons.normalize(saved.season);
       state.postcards = Array.isArray(saved.postcards) ? saved.postcards.filter((card) => card && typeof card.id === "string" && Number.isFinite(card.createdAt)).slice(0, 24).map((card) => ({
@@ -204,13 +207,20 @@
       })) : [];
       travelUiKey = ""; visitorUiKey = "";
       state.journal = Array.isArray(saved.journal) ? saved.journal.filter((entry) => entry && typeof entry.id === "string" && typeof entry.text === "string" && typeof entry.title === "string" && Number.isFinite(entry.createdAt)).slice(0, 100).map((entry) => ({
-        id: entry.id.slice(0, 100), title: entry.title.slice(0, 60), text: entry.text.slice(0, 120), quote: typeof entry.quote === "string" ? entry.quote.slice(0, 80) : "", kind: ["shade", "meeting", "lamplight", "rain-bloom", "garden", "story", "encounter"].includes(entry.kind) ? entry.kind : "shade", ...(PalmCitySeasons.isSeason(entry.season) ? { season: entry.season } : {}), createdAt: entry.createdAt, clock: typeof entry.clock === "string" ? entry.clock.slice(0, 5) : "09:00",
+        id: entry.id.slice(0, 100), title: entry.title.slice(0, 60), text: entry.text.slice(0, 180), quote: typeof entry.quote === "string" ? entry.quote.slice(0, 100) : "", kind: ["shade", "meeting", "lamplight", "rain-bloom", "garden", "story", "encounter", "letter"].includes(entry.kind) ? entry.kind : "shade", ...(PalmCitySeasons.isSeason(entry.season) ? { season: entry.season } : {}), createdAt: entry.createdAt, clock: typeof entry.clock === "string" ? entry.clock.slice(0, 5) : "09:00",
+        choiceLabel: typeof entry.choiceLabel === "string" ? entry.choiceLabel.slice(0, 40) : "",
+        residentName: typeof entry.residentName === "string" ? entry.residentName.slice(0, 20) : "",
+        targetType: typeof entry.targetType === "string" ? entry.targetType.slice(0, 20) : "",
+        effect: typeof entry.effect === "string" ? entry.effect.slice(0, 120) : "",
+        tradeoff: typeof entry.tradeoff === "string" ? entry.tradeoff.slice(0, 120) : "",
+        echoTitle: typeof entry.echoTitle === "string" ? entry.echoTitle.slice(0, 60) : "",
+        echoText: typeof entry.echoText === "string" ? entry.echoText.slice(0, 180) : "",
       })) : [];
     } catch (error) { console.info("Unable to read saved city", error); }
   }
 
   function cityData() {
-    return JSON.parse(JSON.stringify({ schema: 7, items: editHistory.pendingItems || state.items, cityName: state.cityName, season: state.season, zoom: state.zoom, panX: state.panX, panY: state.panY, lastEdited: state.lastEdited, minutes: state.minutes, paused: state.paused, progress: life.progress(), journal: state.journal, environment: environment.save(), visitors: visitors.save(), encounters: encounters.save(), postcards: state.postcards, photos: state.photos, sound: state.sound, reducedMotion: state.reducedMotion }));
+    return JSON.parse(JSON.stringify({ schema: 7, items: editHistory.pendingItems || state.items, cityName: state.cityName, season: state.season, zoom: state.zoom, panX: state.panX, panY: state.panY, lastEdited: state.lastEdited, minutes: state.minutes, paused: state.paused, progress: life.progress(), journal: state.journal, environment: environment.save(), visitors: visitors.save(), encounters: encounters.save(), letters: letters.save(), postcards: state.postcards, photos: state.photos, sound: state.sound, reducedMotion: state.reducedMotion }));
   }
 
   function writeState() {
@@ -327,6 +337,7 @@
     state = defaultState();
     life = PalmCityLife.createSimulation();
     encounters = PalmCityEncounters.createEncounters();
+    letters = PalmCityLetters.createLetters();
     environment = PalmCityWeather.createEnvironment();
     visitors = PalmCityVisitors.createSimulation();
     readState(record.data);
@@ -341,6 +352,7 @@
     rosterKey = wishUiKey = storyUiKey = journalUiKey = gardenUiKey = visitorUiKey = travelUiKey = encounterUiKey = "";
     encounterRecoveryNotice = "";
     lastEncounterResult = null;
+    letterTargetId = null;
     journalExpanded = travelExpanded = false;
     drag = null; touchPointers.clear(); clockSaveElapsed = uiElapsed = animationSeconds = 0; lastFrame = null;
     closeMobileDrawers();
@@ -765,7 +777,8 @@
     updateSeasonUI();
     environment.sync(state.items);
     life.sync(state.items);
-    resumeEncounterJourney();
+    syncLetterPreparation();
+    resumeLetterJourney();
     syncStoryContext();
     life.setWeather(environment.weather.kind);
     syncVisitors();
@@ -1047,7 +1060,7 @@
     life.setStoryContext({ season: state.season, gardens: state.items.filter(item => item.type === "garden").map(item => environment.garden(item.id)).filter(Boolean) });
   }
 
-  function encounterContext() {
+  function letterContext() {
     const hour = state.minutes / 60;
     return {
       items: state.items,
@@ -1058,112 +1071,266 @@
     };
   }
 
-  function encounterTargetStillWorks(active, resident) {
-    if (!active || !resident?.home) return false;
-    const target = state.items.find(item => item.id === active.targetId);
-    if (!target || (active.targetType && target.type !== active.targetType)) return false;
-    const nearType = active.choiceId === "shade-bench"
-      ? "tree"
-      : active.choiceId === "lit-bench" ? "lamp" : "";
-    const radius = active.choiceId === "shade-bench"
-      ? 105
-      : active.choiceId === "lit-bench" ? 100 : 0;
-    if (nearType && !state.items.some(item =>
-      item.type === nearType &&
-      Math.hypot(item.x - target.x, item.y - target.y) <= radius
-    )) return false;
-    const network = PalmCityLife.createNetwork(state.items);
-    return !!PalmCityLife.findRoute(resident.home, [target], network);
+  function letterTemplate(active) {
+    return PalmCityLetters.templates.find((template) => template.kind === active?.kind) || null;
   }
 
-  function startSavedEncounter(active) {
-    const profile = PalmCityEncounters.profiles[active.kind];
+  function letterOptionDefinition(active) {
+    return letterTemplate(active)?.options.find((option) => option.id === active?.choiceId) || null;
+  }
+
+  function ensureLetterResident(context = letterContext()) {
+    const active = letters.active;
+    if (!active || life.residents.some((resident) => resident.id === active.residentId)) return active;
+    if (!life.residents.length) return active;
+    const saved = letters.save();
+    letters.restore({ day: saved.day, history: saved.history, active: null });
+    letterTargetId = null;
+    encounterRecoveryNotice = "原来写信的邻居已经搬走，小城把这封信交给了现在的邻居。";
+    return letters.current(context);
+  }
+
+  function letterNewTarget(active) {
+    if (!active?.choice) return null;
+    const existing = new Set(active.existingTargetIds || []);
+    const ids = [active.targetId, letterTargetId, state.selectedId].filter(Number.isSafeInteger);
+    for (const id of new Set(ids)) {
+      const target = state.items.find((item) => item.id === id && item.type === active.choice.targetType);
+      if (target && !existing.has(target.id)) return target;
+    }
+    return state.items
+      .filter((item) => item.type === active.choice.targetType && !existing.has(item.id))
+      .sort((left, right) => right.id - left.id)[0] || null;
+  }
+
+  function letterRoute(active, target = letterNewTarget(active)) {
+    if (!active || !target) return null;
+    const resident = life.residents.find((person) => person.id === active.residentId);
+    if (!resident?.home) return null;
+    return PalmCityLife.findRoute(resident.home, [target], PalmCityLife.createNetwork(state.items));
+  }
+
+  function letterConditions(active = letters.active) {
+    const target = letterNewTarget(active);
+    const route = letterRoute(active, target);
+    return [
+      {
+        id: "new-target",
+        done: !!target,
+        label: target
+          ? `已在岛上新建一处${catalog[target.type].label}`
+          : `新建一处${active?.choice ? active.choice.label.replace(/^(建|安放|种下)/, "") : "设施"}`,
+      },
+      {
+        id: "route",
+        done: !!route,
+        label: route ? `家门到新设施有 ${Math.max(1, route.points.length - 2)} 段真实小路` : "把这处设施接到邻居走得到的小路",
+      },
+      {
+        id: "ready",
+        done: !!target && !!route,
+        label: target && route ? "让邻居出发，完成这封回信" : "两件事都完成后，邻居才会出发",
+      },
+    ];
+  }
+
+  function letterStageKind(active) {
+    if (active?.kind === "shelter") return "rain";
+    if (active?.kind === "lamplight") return "night";
+    return ["rain", "sunny", "night"].includes(environment.weather.kind) && environment.weather.kind === "rain"
+      ? "rain"
+      : state.minutes / 60 >= 20 || state.minutes / 60 < 7 ? "night" : "sunny";
+  }
+
+  function startLetterJourney(active, context = letterContext()) {
+    const resident = life.residents.find((person) => person.id === active?.residentId);
+    const target = state.items.find((item) => item.id === active?.targetId && item.type === active?.choice?.targetType);
+    const template = letterTemplate(active);
+    const option = letterOptionDefinition(active);
+    if (!resident || !target || !template || !option) return false;
     return life.startEncounter({
-      ...active,
-      title: profile.title,
-      text: profile.text(active.residentName),
-      quote: profile.quote.replace(/[“”]/g, ""),
+      id: active.id,
+      residentId: resident.id,
+      targetId: target.id,
+      title: option.resultTitle,
+      text: option.resultText(resident.name),
+      quote: template.quote,
+      choiceLabel: `去${catalog[target.type].label}`,
+      kind: letterStageKind(active),
     });
   }
 
-  function resumeEncounterJourney() {
+  function syncLetterPreparation() {
     if (!ready) return;
-    const context = encounterContext();
-    const active = encounters.current(context);
-    if (!active) {
-      if (life.hasEncounterJourney()) life.cancelEncounter();
+    const context = letterContext();
+    const active = ensureLetterResident(context);
+    if (!active || !["accepted", "prepared"].includes(active.status)) return;
+    const target = letterNewTarget(active);
+    const route = letterRoute(active, target);
+    if (active.status === "prepared" && (!target || !route)) {
+      letters.interrupt("新设施或去往它的小路发生了变化。");
+      encounterRecoveryNotice = "去往新设施的路线变了，邻居先在门口等你重新接好小路。";
+      encounterUiKey = "";
+      persist();
       return;
     }
-    const resident = life.residents.find(person => person.id === active.residentId);
-    if (!resident) {
-      if (life.hasEncounterJourney()) life.cancelEncounter();
-      if (encounters.reopen()) {
-        encounterRecoveryNotice = "今天约好的邻居已经不在城里，这一幕会重新等你选择。";
-        encounterUiKey = "";
-        persist();
-      }
-      return;
-    }
-    if (active.status !== "chosen") {
-      if (life.hasEncounterJourney()) life.cancelEncounter();
-      return;
-    }
-    if (!encounterTargetStillWorks(active, resident)) {
-      if (life.hasEncounterJourney()) life.cancelEncounter();
-      if (encounters.reopen()) {
-        encounterRecoveryNotice = "去往这一幕的小路或目的地已经变化，邻居先回了家。你可以重新选一个走得到的街角。";
-        encounterUiKey = "";
-        persist();
-      }
-      return;
-    }
-    if (!life.hasEncounterJourney() && !startSavedEncounter(active)) {
-      if (encounters.reopen()) {
-        encounterRecoveryNotice = "这段路刚刚没有走通，邻居先回了家。换一个地方，今天仍可以继续。";
-        encounterUiKey = "";
-        persist();
-      }
-      return;
-    }
-    if (!state.selectedResidentId) state.selectedResidentId = resident.id;
+    if (!target || !route) return;
+    const prepared = letters.prepare(target.id, context);
+    if (!prepared.ok) return;
+    letterTargetId = target.id;
+    encounterRecoveryNotice = "";
+    encounterUiKey = "";
   }
 
-  function selectEncounterChoice(choiceId) {
+  function resumeLetterJourney() {
+    if (!ready) return;
+    const context = letterContext();
+    const active = ensureLetterResident(context);
+    if (!active || active.status !== "travelling") return;
+    const resident = life.residents.find((person) => person.id === active.residentId);
+    if (!resident) {
+      if (life.hasEncounterJourney()) life.cancelEncounter();
+      const saved = letters.save();
+      letters.restore({ day: saved.day, history: saved.history, active: null });
+      letterTargetId = null;
+      encounterRecoveryNotice = "写信的邻居已经离开，小城把今天的信重新交给了另一位邻居。";
+      encounterUiKey = "";
+      persist();
+      return;
+    }
+    if (!letterRoute(active)) {
+      if (life.hasEncounterJourney()) life.cancelEncounter();
+      letters.interrupt("去往目的地的路线中断了。");
+      encounterRecoveryNotice = "去往新设施的路线中断了，邻居先回到家门口，等你重新接好小路。";
+      encounterUiKey = "";
+      persist();
+      return;
+    }
+    if (life.hasEncounterJourney()) return;
+    if (!startLetterJourney(active, context)) {
+      letters.interrupt("这段路没有走通。");
+      encounterRecoveryNotice = "这段路刚刚没有走通，邻居先回了家。接好新设施后仍可继续。";
+      encounterUiKey = "";
+      persist();
+      return;
+    }
+    state.selectedResidentId = resident.id;
+  }
+
+  function selectLetterChoice(choiceId) {
     if (saveBlocked || collectionBusy) return;
-    const context = encounterContext();
-    const result = encounters.select(choiceId, context);
+    const context = letterContext();
+    const result = letters.accept(choiceId, context);
     if (!result.ok) {
       showToast(result.reason);
       updateEncounterUI();
       return;
     }
-    const profile = PalmCityEncounters.profiles[result.active.kind];
-    const started = life.startEncounter({
-      ...result.active,
-      title: profile.title,
-      text: profile.text(result.active.residentName),
-      quote: profile.quote.replace(/[“”]/g, ""),
-    });
-    if (!started) {
-      encounters.reopen();
+    encounterRecoveryNotice = "";
+    lastEncounterResult = null;
+    letterTargetId = null;
+    state.selectedId = null;
+    state.selectedResidentId = result.active.residentId;
+    state.activeType = null;
+    if (state.viewMode) setViewMode(false);
+    persist();
+    updateEncounterUI();
+    chooseMaterial(result.option.targetType);
+    showToast(`回应已写下 · 新建一处${catalog[result.option.targetType].label}，再把它接上小路`);
+  }
+
+  function placeLetterTarget() {
+    const active = letters.active;
+    if (!active?.choice || !["accepted", "prepared"].includes(active.status) || saveBlocked || collectionBusy) return;
+    if (state.viewMode) setViewMode(false);
+    document.body.classList.remove("is-scene-focus");
+    chooseMaterial(active.choice.targetType);
+  }
+
+  function connectLetterTarget() {
+    const active = letters.active;
+    const target = letterNewTarget(active);
+    if (!active?.choice || !target || saveBlocked || collectionBusy) {
+      showToast(active?.choice ? `先新建一处${catalog[active.choice.targetType].label}。` : "先回应今天的来信。");
+      return;
+    }
+    if (letterRoute(active, target)) {
+      showToast("这处新设施已经接上邻居走得到的小路。");
+      return;
+    }
+    const plan = PalmCityDesign.planConnection(target, state.items);
+    if (plan.status === "unsupported") {
+      showToast(`把${catalog[target.type].label}放在已经有邻居通行的小路旁约一格处；树、路灯和花坛不需要额外接路按钮。`);
+      return;
+    }
+    if (plan.status === "connected") {
+      showToast("设施已经靠近主路，但门口还差一段邻居能走的路。挪到小路旁再试试。");
+      return;
+    }
+    if (state.viewMode) setViewMode(false);
+    selectItem(target.id);
+    connectSelected();
+  }
+
+  function departLetter() {
+    if (saveBlocked || collectionBusy) return;
+    const context = letterContext();
+    const active = ensureLetterResident(context);
+    if (!active || active.status !== "prepared") {
+      showToast("先新建设施并接通真实小路。");
+      return;
+    }
+    const result = letters.depart(context);
+    if (!result.ok) {
+      encounterRecoveryNotice = result.reason;
       encounterUiKey = "";
-      showToast("这条路刚刚没能走通，先换一个地方吧。");
       updateEncounterUI();
+      showToast(result.reason);
+      return;
+    }
+    if (!startLetterJourney(result.active, context)) {
+      letters.interrupt("邻居没能走上这段路。");
+      encounterRecoveryNotice = "这段路刚刚没有走通，请检查新设施与家门之间的小路。";
+      encounterUiKey = "";
+      updateEncounterUI();
+      showToast(encounterRecoveryNotice);
       return;
     }
     encounterRecoveryNotice = "";
     lastEncounterResult = null;
     state.selectedResidentId = result.active.residentId;
     state.selectedId = null;
-    state.activeType = null;
     setViewMode(true);
     persist();
     enterSceneFocus(result.active.residentId);
-    showToast(`今日一幕开始了 · 跟着${result.active.residentName}慢慢走`);
+    showToast(`回信出发了 · 跟着${result.active.residentName}沿小路走过去`);
+  }
+
+  function advanceLetterDay() {
+    if (saveBlocked || collectionBusy) return;
+    const context = letterContext();
+    const result = letters.advance(context);
+    if (!result.ok) {
+      showToast(result.reason);
+      return;
+    }
+    letterTargetId = null;
+    lastEncounterResult = null;
+    encounterRecoveryNotice = "";
+    encounterUiKey = "";
+    document.body.classList.remove("is-scene-focus");
+    if (state.viewMode) setViewMode(false);
+    persist();
+    render();
+    document.getElementById("encounterPanel").scrollIntoView({
+      block: "center",
+      behavior: state.reducedMotion ? "instant" : "smooth",
+    });
+    showToast(`第 ${result.day} 天 · 新的一封信到了`);
   }
 
   function enterSceneFocus(residentId = null) {
-    const id = residentId || encounters.active?.residentId || state.selectedResidentId;
+    const id = residentId || letters.active?.residentId || state.selectedResidentId;
     const resident = life.residents.find(person => person.id === id);
     if (!resident) return;
     if (!state.viewMode) setViewMode(true);
@@ -1203,67 +1370,76 @@
   function updateEncounterUI() {
     const panel = document.getElementById("encounterPanel");
     if (!panel) return;
-    const context = encounterContext();
-    const active = encounters.current(context);
+    const context = letterContext();
+    const active = ensureLetterResident(context);
     const resident = active ? life.residents.find(person => person.id === active.residentId) : null;
-    const options = active?.status === "offered" ? encounters.options(context) : [];
-    const completed = active ? null : encounters.today(context);
-    const completedResident = completed
-      ? life.residents.find(person => person.id === completed.residentId)
+    const template = letterTemplate(active);
+    const options = active?.status === "offered" ? letters.options(context) : [];
+    const target = active?.choice ? letterNewTarget(active) : null;
+    const route = active?.choice ? letterRoute(active, target) : null;
+    const conditions = active?.choice ? letterConditions(active) : [];
+    const echo = letters.echo(context);
+    const completed = active?.status === "completed"
+      ? letters.history().find((entry) => entry.id === active.id) || lastEncounterResult
       : null;
+    const completedResident = completed ? life.residents.find(person => person.id === completed.residentId) : null;
     const phase = resident?.phase || completedResident?.phase || "";
     const signature = JSON.stringify([
-      active,
-      options,
-      completed,
-      phase,
-      state.paused,
-      state.viewMode,
-      document.body.classList.contains("is-scene-focus"),
-      collectionBusy,
-      saveBlocked,
-      encounterRecoveryNotice,
+      active, options, target?.id, target?.x, target?.y, route?.points?.length || 0, conditions,
+      completed, echo, phase, state.paused, state.viewMode,
+      document.body.classList.contains("is-scene-focus"), collectionBusy, saveBlocked, encounterRecoveryNotice,
     ]);
     if (signature === encounterUiKey) return;
     encounterUiKey = signature;
 
-    if (!active && !completed) {
+    if (!active && !life.residents.length) {
       panel.dataset.kind = "quiet";
-      panel.innerHTML = `<article class="encounter-card is-quiet"><span class="encounter-symbol" aria-hidden="true">✦</span><div class="encounter-quiet-copy"><p class="eyebrow">ONE LITTLE MOMENT A DAY</p><h2>今天的一幕，还在等一位邻居</h2><p>先安放一间小屋。小路接通以后，每天都会从晴雨与昼夜里长出一段可以亲自陪邻居走完的小故事。</p></div></article>`;
+      panel.innerHTML = `<article class="encounter-card is-quiet"><span class="encounter-symbol" aria-hidden="true">✉</span><div class="encounter-quiet-copy"><p class="eyebrow">A LETTER NEEDS A NEIGHBOUR</p><h2>第一封回信，还在等一位邻居</h2><p>先安放并接通一间小屋。邻居住进来以后，每天都会在门口留下一封短信，等你在岛上回应。</p></div></article>`;
       panel.querySelectorAll("button").forEach(enableTouchCommand);
       return;
     }
 
-    const kind = active?.kind || completed.kind;
-    const profile = PalmCityEncounters.profiles[kind];
-    panel.dataset.kind = kind;
+    if (!active || !template) {
+      panel.dataset.kind = "quiet";
+      panel.innerHTML = `<article class="encounter-card is-quiet"><span class="encounter-symbol" aria-hidden="true">✉</span><div class="encounter-quiet-copy"><p class="eyebrow">A LETTER IS WAITING</p><h2>信正在送到门口</h2><p>先让门前的小路把家与街道接起来，下一封回信就会出现在这里。</p></div></article>`;
+      panel.querySelectorAll("button").forEach(enableTouchCommand);
+      return;
+    }
+
+    panel.dataset.kind = letterStageKind(active);
+    panel.dataset.letterKind = active.kind;
+    const dateLabel = new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" });
+    const echoMarkup = echo ? `<aside class="letter-echo" aria-label="昨天留下的话"><span>昨天留下的话 · 第 ${echo.day} 天</span><strong>${escapeHtml(echo.echoTitle)}</strong><p>${escapeHtml(echo.echoText)}</p></aside>` : "";
+    const recovery = encounterRecoveryNotice ? `<p class="encounter-recovery" role="status">${escapeHtml(encounterRecoveryNotice)}</p>` : "";
 
     if (active?.status === "offered") {
-      const date = new Date(`${active.date}T12:00:00`);
-      const dateLabel = date.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" });
-      const mood = state.paused ? "小城时间暂停中" : collectionBusy || saveBlocked ? "正在整理今天" : "今日可出发";
-      const recovery = encounterRecoveryNotice ? `<p class="encounter-recovery" role="status">${escapeHtml(encounterRecoveryNotice)}</p>` : "";
-      panel.innerHTML = `<article class="encounter-card encounter-offer">
-        <header class="encounter-topline"><span class="encounter-date">${escapeHtml(dateLabel)} · 每日一幕</span><span class="encounter-live ${state.paused ? "is-paused" : ""}"><i></i>${escapeHtml(mood)}</span></header>
+      panel.innerHTML = `${echoMarkup}<article class="encounter-card encounter-offer letter-card letter-offer">
+        <header class="encounter-topline"><span class="encounter-date">${escapeHtml(dateLabel)} · 第 ${active.day} 天来信</span><span class="encounter-live ${state.paused ? "is-paused" : ""}"><i></i>${state.paused ? "时间暂停，信还在这里" : "等你写下回应"}</span></header>
         <div class="encounter-lead">
-          <span class="encounter-symbol" aria-hidden="true">${profile.symbol}</span>
+          <span class="encounter-symbol" aria-hidden="true">${template.symbol}</span>
           <div class="encounter-heading">
-            <p class="eyebrow">${escapeHtml(profile.kicker)}</p>
-            <h2>${escapeHtml(profile.title)}</h2>
-            <p class="encounter-resident"><span>今天和</span><strong>${escapeHtml(active.residentName)}</strong><span>一起</span><i>${escapeHtml(profile.label)}</i></p>
+            <p class="eyebrow">${escapeHtml(template.kicker)}</p>
+            <h2>${escapeHtml(template.title)}</h2>
+            <p class="encounter-resident"><span>写信的人</span><strong>${escapeHtml(active.residentName)}</strong><i>一封信，只能选一个回应</i></p>
           </div>
         </div>
-        <blockquote>“${escapeHtml(profile.quote.replace(/[“”]/g, ""))}”</blockquote>
-        <p class="encounter-story">${escapeHtml(profile.text(active.residentName))}</p>
-        <div class="encounter-options" aria-label="今天这一幕可以去哪里">${options.map((option, index) => `<button type="button" data-encounter-choice="${escapeHtml(option.id)}" ${!option.available || saveBlocked || collectionBusy ? "disabled" : ""}><span class="encounter-option-index">${String(index + 1).padStart(2, "0")}</span><span><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.available ? option.note : option.reason)}</small></span><i aria-hidden="true">${option.available ? "↗" : "—"}</i></button>`).join("")}</div>
+        <blockquote>“${escapeHtml(template.quote.replace(/[“”]/g, ""))}”</blockquote>
+        <p class="encounter-story letter-copy">${escapeHtml(template.letter(active.residentName))}</p>
+        <div class="letter-options" aria-label="选择今天如何回信">${options.map((option, index) => `<button type="button" class="letter-option" data-letter-choice="${escapeHtml(option.id)}" ${saveBlocked || collectionBusy ? "disabled" : ""}>
+          <span class="letter-option-number">${String(index + 1).padStart(2, "0")}</span>
+          <span class="letter-option-copy"><small>${escapeHtml(option.label)}</small><strong>${escapeHtml(option.title)}</strong><p>${escapeHtml(option.description)}</p></span>
+          <span class="letter-effect"><i>会留下</i>${escapeHtml(option.effect)}</span>
+          <span class="letter-tradeoff"><i>要承担取舍</i>${escapeHtml(option.tradeoff)}</span>
+          <b aria-hidden="true">↗</b>
+        </button>`).join("")}</div>
         ${recovery}
-        <footer class="encounter-foot"><span>每天只发生一幕，回来后仍可自由建造</span><span>${options.filter(option => option.available).length} 条小路可以抵达</span></footer>
+        <footer class="encounter-foot"><span>回应会立刻锁定，并永久留下这件新设施</span><span>选一个，就要承担没有选另一个的后果</span></footer>
       </article>`;
       panel.querySelectorAll("button").forEach(enableTouchCommand);
       return;
     }
 
-    if (active?.status === "chosen") {
+    if (active?.status === "travelling") {
       const labels = {
         "encounter-outbound": ["正沿小路出发", "跟着邻居，看看今天会在哪里停下。"],
         "encounter-resting": ["已经抵达", resident ? life.activity(resident) : "在今天的街角停一会儿。"],
@@ -1272,34 +1448,65 @@
       const phaseLabel = labels[phase] || ["准备出门", "小城会沿着真实小路安排这段旅程。"];
       const stepState = phase === "encounter-outbound" ? 0 : phase === "encounter-resting" ? 1 : phase === "encounter-returning" ? 2 : 0;
       const live = state.paused ? `小城暂时停在了这一刻，${active.residentName}会在原地等一会儿。` : phaseLabel[0];
-      panel.innerHTML = `<article class="encounter-card encounter-journey">
-        <header class="encounter-topline"><span class="encounter-date">今日一幕 · ${escapeHtml(profile.label)}</span><span class="encounter-live ${state.paused ? "is-paused" : ""}"><i></i>${escapeHtml(live)}</span></header>
+      const destination = catalog[active.choice.targetType]?.label || "新设施";
+      panel.innerHTML = `<article class="encounter-card encounter-journey letter-card letter-journey">
+        <header class="encounter-topline"><span class="encounter-date">回信出发 · ${escapeHtml(destination)}</span><span class="encounter-live ${state.paused ? "is-paused" : ""}"><i></i>${escapeHtml(live)}</span></header>
         <div class="encounter-journey-main">
-          <span class="encounter-symbol" aria-hidden="true">${profile.symbol}</span>
-          <div><p class="eyebrow">WITH ${escapeHtml(active.residentName.toUpperCase())}</p><h2>${escapeHtml(active.choiceLabel || profile.title)}</h2><p>${escapeHtml(phaseLabel[1])}</p></div>
+          <span class="encounter-symbol" aria-hidden="true">${template.symbol}</span>
+          <div><p class="eyebrow">WITH ${escapeHtml(active.residentName.toUpperCase())}</p><h2>${escapeHtml(active.choice.title)}</h2><p>${escapeHtml(phaseLabel[1])}</p></div>
         </div>
-        <ol class="encounter-progress" aria-label="这一幕的行程"><li class="${stepState === 0 ? "is-active" : "is-done"}"><span>01</span><strong>沿小路出发</strong></li><li class="${stepState === 1 ? "is-active" : stepState > 1 ? "is-done" : ""}"><span>02</span><strong>在目的地停留</strong></li><li class="${stepState === 2 ? "is-active" : ""}"><span>03</span><strong>带着回忆回家</strong></li></ol>
-        <p class="encounter-choice-line"><span>${escapeHtml(active.residentName)}说</span>${escapeHtml(profile.quote)}</p>
-        <div class="encounter-focus-actions"><button type="button" data-encounter-focus="${escapeHtml(active.residentId)}">跟着${escapeHtml(active.residentName)}看这一幕 ↗</button><button type="button" data-encounter-exit>收起镜头</button></div>
-        <footer class="encounter-foot"><span>这一幕在邻居真正抵达后才会写进日记</span><span>旅行不会因为暂停而消失</span></footer>
+        <ol class="encounter-progress" aria-label="回信的行程"><li class="${stepState === 0 ? "is-active" : "is-done"}"><span>01</span><strong>带着回应出发</strong></li><li class="${stepState === 1 ? "is-active" : stepState > 1 ? "is-done" : ""}"><span>02</span><strong>走到新设施</strong></li><li class="${stepState === 2 ? "is-active" : ""}"><span>03</span><strong>把今天留下</strong></li></ol>
+        <p class="encounter-choice-line"><span>${escapeHtml(active.residentName)}说</span>${escapeHtml(template.quote)}</p>
+        <div class="encounter-focus-actions"><button type="button" data-encounter-focus="${escapeHtml(active.residentId)}">跟着${escapeHtml(active.residentName)}走这一段 ↗</button><button type="button" data-encounter-exit>收起镜头</button></div>
+        <footer class="encounter-foot"><span>真正抵达以后，这封回信才会写进日记</span><span>${route ? `沿 ${Math.max(1, route.points.length - 2)} 段小路抵达` : "正在确认路线"}</span></footer>
       </article>`;
       panel.querySelectorAll("button").forEach(enableTouchCommand);
       return;
     }
 
-    const date = new Date(`${completed.date}T12:00:00`);
-    const dateLabel = date.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" });
-    const completedProfile = PalmCityEncounters.profiles[completed.kind];
-    panel.innerHTML = `<article class="encounter-card is-complete">
-      <header class="encounter-topline"><span class="encounter-date">${escapeHtml(dateLabel)} · 今日已经收好</span><span class="encounter-live is-complete"><i></i>这一幕完成了</span></header>
-      <div class="encounter-complete-mark" aria-hidden="true">${completedProfile.symbol}</div>
-      <p class="eyebrow">A SMALL DAY, KEPT FOREVER</p>
-      <h2>${escapeHtml(completed.title)}</h2>
-      <p class="encounter-story">${escapeHtml(completed.text)}</p>
-      <blockquote>“${escapeHtml(completed.quote)}”</blockquote>
-      <div class="encounter-complete-meta"><span>和${escapeHtml(completed.residentName)}一起</span><span>${escapeHtml(completed.choiceLabel)}</span><span>已写进小城日记</span></div>
-      <div class="encounter-complete-foot"><button type="button" data-memory-id="${escapeHtml(completed.id)}">做成明信片 ↗</button>${completedResident ? `<button type="button" data-encounter-focus="${escapeHtml(completedResident.id)}">再看看${escapeHtml(completedResident.name)}</button>` : ""}<button type="button" data-encounter-build>回到自由建造</button></div>
-      <p class="encounter-postcard-mark" aria-hidden="true">ONE DAY<br/>IN PALM CITY</p>
+    if (completed) {
+      const keptTarget = state.items.find((item) => item.id === completed.targetId);
+      const completedOptions = letterTemplate(completed)?.options || [];
+      const other = completedOptions.find((option) => option.id !== completed.choiceId);
+      panel.innerHTML = `${echoMarkup}<article class="encounter-card is-complete letter-card letter-complete">
+        <header class="encounter-topline"><span class="encounter-date">${escapeHtml(dateLabel)} · 第 ${completed.day} 天回信</span><span class="encounter-live is-complete"><i></i>已经抵达，并写进日记</span></header>
+        <div class="encounter-complete-mark" aria-hidden="true">${template.symbol}</div>
+        <p class="eyebrow">A LETTER BECAME A PLACE</p>
+        <h2>${escapeHtml(completed.title)}</h2>
+        <p class="encounter-story">${escapeHtml(completed.text)}</p>
+        <blockquote>“${escapeHtml(completed.quote)}”</blockquote>
+        <div class="letter-result-grid">
+          <section><span>地图上留下了</span><strong>${escapeHtml(keptTarget ? catalog[keptTarget.type].label : completed.choiceLabel)}</strong><p>${escapeHtml(completed.effect)}</p></section>
+          <section><span>这次没有选择</span><strong>${escapeHtml(other?.title || "另一个回应")}</strong><p>${escapeHtml(completed.tradeoff)}</p></section>
+        </div>
+        <aside class="letter-next-echo"><span>明天还会听见</span><strong>${escapeHtml(completed.echoTitle)}</strong><p>${escapeHtml(completed.echoText)}</p></aside>
+        <div class="encounter-complete-meta"><span>和${escapeHtml(completed.residentName)}一起</span><span>${escapeHtml(completed.choiceLabel)}</span><span>已写进小城日记</span></div>
+        <div class="encounter-complete-foot letter-complete-actions"><button type="button" data-letter-advance>进入下一天 · 收下一封信 →</button><button type="button" data-memory-id="${escapeHtml(completed.id)}">做成明信片 ↗</button>${completedResident ? `<button type="button" data-encounter-focus="${escapeHtml(completedResident.id)}">再看看${escapeHtml(completedResident.name)}</button>` : ""}<button type="button" data-encounter-build>回到自由建造</button></div>
+        <p class="encounter-postcard-mark" aria-hidden="true">ONE LETTER<br/>IN PALM CITY</p>
+      </article>`;
+      panel.querySelectorAll("button").forEach(enableTouchCommand);
+      return;
+    }
+
+    const choice = active.choice;
+    const destination = catalog[choice.targetType]?.label || choice.label;
+    panel.innerHTML = `${echoMarkup}<article class="encounter-card letter-card letter-preparation">
+      <header class="encounter-topline"><span class="encounter-date">回应已写下 · ${escapeHtml(template.title)}</span><span class="encounter-live"><i></i>${active.status === "prepared" ? "小路已经接通" : "正在准备街区"}</span></header>
+      <div class="encounter-lead">
+        <span class="encounter-symbol" aria-hidden="true">${template.symbol}</span>
+        <div class="encounter-heading"><p class="eyebrow">DECISION LOCKED</p><h2>${escapeHtml(choice.title)}</h2><p class="encounter-resident"><span>${escapeHtml(active.residentName)}选择了</span><strong>${escapeHtml(choice.label)}</strong></p></div>
+      </div>
+      <p class="letter-decision">“${escapeHtml(choice.description)}”</p>
+      <div class="letter-effect"><i>会留下</i>${escapeHtml(choice.effect)}</div>
+      <div class="letter-tradeoff"><i>要承担取舍</i>${escapeHtml(choice.tradeoff)}</div>
+      <ol class="letter-checklist" aria-label="回信准备清单">${conditions.map((condition, index) => `<li class="${condition.done ? "is-done" : ""}"><span>${condition.done ? "✓" : String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(condition.label)}</strong><small>${index === 0 ? "选信之前的同类设施不算，这封信要真的改变地图。" : index === 1 ? "沿着家门前的道路一步步走到新设施，不能隔着断开的角落。" : "只有前两步都完成，邻居才会亲自走过去。"}</small></div></li>`).join("")}</ol>
+      ${recovery}
+      <div class="letter-actions">
+        <button type="button" data-letter-place="${escapeHtml(choice.targetType)}">${target ? "重新安放" : "新建"}${escapeHtml(destination)}</button>
+        <button type="button" data-letter-connect="${target ? escapeHtml(target.id) : ""}" ${!target || route ? "disabled" : ""}>${route ? "新设施已接通" : "接通门前小路"}</button>
+        <button type="button" data-letter-depart ${active.status !== "prepared" || !target || !route ? "disabled" : ""}>让${escapeHtml(active.residentName)}出发 →</button>
+      </div>
+      <footer class="encounter-foot"><span>选择不会反悔，但设施和道路可以重新布置</span><span>${target ? `新设施 #${target.id} · ${formatPosition(target)}` : "还没有新建这件设施"}</span></footer>
     </article>`;
     panel.querySelectorAll("button").forEach(enableTouchCommand);
   }
@@ -1389,28 +1596,35 @@
   function collectMemories() {
     let added = false;
     for (const event of [...life.drainEvents(), ...environment.drainEvents()]) {
-      if (event.kind === "encounter") {
-        const completed = encounters.complete({ ...event, createdAt: Date.now() });
+      const activeLetter = letters.active;
+      if (
+        event.kind === "encounter" &&
+        activeLetter?.status === "travelling" &&
+        event.id === activeLetter.id
+      ) {
+        const completed = letters.complete({ ...event, createdAt: Date.now() });
         if (!completed) {
           encounterUiKey = "";
           updateEncounterUI();
           continue;
         }
-        if (!state.journal.some(entry => entry.id === completed.id)) {
-          const clock = document.getElementById("cityClock").textContent;
+        if (!state.journal.some((entry) => entry.id === completed.id)) {
           state.journal.unshift({
             id: completed.id,
             title: completed.title,
             text: completed.text,
             quote: completed.quote,
-            kind: "encounter",
-            date: completed.date,
-            choiceLabel: completed.choiceLabel,
+            kind: "letter",
             residentName: completed.residentName,
-            sceneKind: completed.kind,
-            createdAt: completed.createdAt,
-            clock,
+            choiceLabel: completed.choiceLabel,
+            targetType: completed.targetType,
+            effect: completed.effect,
+            tradeoff: completed.tradeoff,
+            echoTitle: completed.echoTitle,
+            echoText: completed.echoText,
+            clock: document.getElementById("cityClock").textContent,
             season: state.season,
+            createdAt: completed.createdAt,
           });
           state.journal = state.journal.slice(0, 100);
         }
@@ -1419,7 +1633,7 @@
         updateEncounterUI();
         updateJournalUI();
         persist();
-        showToast(`今天的这一幕收进日记 · ${completed.title}`);
+        showToast(`今天的回信已经抵达 · ${completed.title}`);
         continue;
       }
       if (state.journal.some((entry) => entry.id === event.id)) continue;
@@ -2148,7 +2362,7 @@
       context.setLineDash([]); context.beginPath(); context.arc(0, 0, 32, 0, Math.PI * 2); context.stroke();
       context.fillStyle = "#b38468"; context.textAlign = "center"; context.font = '700 22px "Microsoft YaHei", sans-serif'; context.fillText(String(card.number).padStart(2, "0"), 0, 1);
       context.font = '10px "Microsoft YaHei", sans-serif'; context.fillText("来访留念", 0, 18); context.restore();
-      context.textAlign = "right"; context.font = '11px "Microsoft YaHei", sans-serif'; context.fillText("PALM-SIZED WORLD · 18", 1545, 927);
+      context.textAlign = "right"; context.font = '11px "Microsoft YaHei", sans-serif'; context.fillText("PALM-SIZED WORLD · 19", 1545, 927);
       const compact = document.createElement("canvas"); compact.width = 1000; compact.height = 600;
       compact.getContext("2d").drawImage(canvas, 0, 0, 1000, 600);
       let quality = .82, image = compact.toDataURL("image/jpeg", quality);
@@ -2244,7 +2458,7 @@
           context.fillText(`“${memory.quote}”`, 80, 896);
           context.textAlign = "right";
           context.font = '12px "Microsoft YaHei", sans-serif';
-          context.fillText("PALM-SIZED WORLD · 18", 1545, 906);
+          context.fillText("PALM-SIZED WORLD · 19", 1545, 906);
           context.textAlign = "left";
         }
         canvas.toBlob((blob) => {
@@ -2461,8 +2675,13 @@
   }));
 
   document.addEventListener("click", (event) => {
-    const encounterChoice = event.target.closest("[data-encounter-choice]");
-    if (encounterChoice) selectEncounterChoice(encounterChoice.dataset.encounterChoice);
+    const letterChoice = event.target.closest("[data-letter-choice]");
+    if (letterChoice) selectLetterChoice(letterChoice.dataset.letterChoice);
+    if (event.target.closest("[data-letter-place]")) placeLetterTarget();
+    const letterConnect = event.target.closest("[data-letter-connect]");
+    if (letterConnect) connectLetterTarget(Number(letterConnect.dataset.letterConnect));
+    if (event.target.closest("[data-letter-depart]")) departLetter();
+    if (event.target.closest("[data-letter-advance]")) advanceLetterDay();
     const encounterFocus = event.target.closest("[data-encounter-focus]");
     if (encounterFocus) enterSceneFocus(encounterFocus.dataset.encounterFocus);
     if (event.target.closest("[data-encounter-exit]")) exitSceneFocus();
