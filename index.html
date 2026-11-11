@@ -112,7 +112,7 @@
             <span class="tip-icon">✦</span>
             <span>拖动空白处浏览小城，滚轮或右下角按钮缩放。</span>
           </div>
-          <div class="version-note"><span>CHAPTER 16</span><strong>看见日常配套</strong><small>商店、休憩点和广场，逐一连接到居民的家门口。</small></div>
+          <div class="version-note"><span>CHAPTER 17</span><strong>城市会长大</strong><small>真正接通的小路、建筑与景色，会慢慢长出名字、气质和街区画像。</small></div>
         </aside>
 
         <section class="city-column">
@@ -226,7 +226,12 @@
               <div class="placement-cursor" id="placementCursor"><span></span><small>点击放置</small></div>
               <div class="placement-feedback" id="placementFeedback" hidden aria-hidden="true"><svg viewBox="-76 -90 152 140"></svg><div><strong></strong><small></small></div></div>
               <div class="stage-empty" id="stageEmpty"><div class="empty-orbit">✦</div><strong>从一片空地开始</strong><span>从左侧选择小屋、树木或小路，然后点击岛屿。</span></div>
-              <div class="scene-caption"><span class="caption-kicker">SLOW DAYS, LITTLE JOYS</span><strong id="sceneCityName">风从这里来</strong><span id="sceneLifeHint">小城的一天，开始了。</span></div>
+              <div class="scene-caption">
+                <span class="caption-kicker">SLOW DAYS, LITTLE JOYS</span>
+                <span class="scene-identity-line"><span class="scene-identity-seal" id="sceneIdentitySeal" aria-hidden="true">始</span><span class="scene-identity-title" id="sceneIdentityTitle">一页空白</span><span class="scene-identity-traits" id="sceneIdentityTraits">第一笔还在路上</span></span>
+                <strong id="sceneCityName">风从这里来</strong>
+                <span id="sceneLifeHint">小城的一天，开始了。</span>
+              </div>
               <div class="resident-popover" id="residentPopover" hidden role="dialog" aria-labelledby="residentDetailName">
                 <button class="close-resident" id="closeResident" type="button" aria-label="关闭居民档案">×</button>
                 <span class="resident-detail-kicker">遇见一位邻居</span>
@@ -283,6 +288,18 @@
             <div class="stat-card"><span class="stat-icon">◷</span><strong id="lastEdited">刚刚</strong><small>最后编辑</small></div>
             <div class="stat-card"><span class="stat-icon">♧</span><strong id="residentCount">0</strong><small>居民</small></div>
           </div>
+
+          <section class="city-identity-card" data-primary="empty" data-unserved="false" aria-labelledby="cityIdentityTitle">
+            <div class="city-identity-heading">
+              <span class="city-identity-seal" id="cityIdentitySeal" aria-hidden="true">始</span>
+              <div><span class="eyebrow">THE CITY, AS IT GROWS</span><h3 id="cityIdentityTitle">一页空白</h3></div>
+            </div>
+            <p class="city-identity-summary" id="cityIdentitySummary">还没有街区。放下第一间小屋或第一段小路，城市就会开始认识自己。</p>
+            <div class="identity-traits" id="cityIdentityTraits" aria-label="城市气质"></div>
+            <div class="identity-districts" id="cityIdentityDistricts" aria-label="街区画像"><span class="identity-district is-empty">第一条小路，等一枚脚印</span></div>
+            <blockquote class="identity-resident-line"><span>路过的人说</span><p id="cityIdentityResidentLine">这里还很安静，等第一件小事发生。</p></blockquote>
+            <div class="city-identity-foot"><span>随道路与入口自动生长</span><b id="cityIdentitySignature">PC17-0000000</b></div>
+          </section>
 
           <section class="personal-album-panel" aria-labelledby="personalAlbumTitle"><div class="residents-heading"><h3 id="personalAlbumTitle">我的小城相册</h3><span id="personalAlbumCount">0 张随手拍</span></div><p>只属于这座城，也只属于这一刻。</p><div id="personalAlbumPreview" class="personal-album-preview"></div><button type="button" class="album-open" id="openAlbumArchive">翻开我的相册 ↗</button></section>
 
@@ -365,6 +382,7 @@
     <script src="./city-weather.js" defer></script>
     <script src="./city-visitors.js" defer></script>
     <script src="./city-collection.js" defer></script>
+    <script src="./city-identity.js" defer></script>
     <script src="./app.js" defer></script>
   </body>
 </html>

@@ -154,6 +154,7 @@
   let capturingPhoto = false;
   let guideUiKey = "", guideNetworkKey = "", guideNetwork = null, guideAction = null, guideCollapsed = false;
   let placementPreviewKey = "", buildEffectTimer;
+  let cityIdentity = null, cityIdentityKey = "";
 
   function cloneItems(items) { return items.map((item) => ({ ...item })); }
 
@@ -310,6 +311,7 @@
   function activateCity(record) {
     clearBuildFeedback();
     editHistory.clear(); hidePlacementPreview();
+    cityIdentity = null; cityIdentityKey = "";
     guideUiKey = guideNetworkKey = ""; guideNetwork = guideAction = null; guideCollapsed = false;
     document.getElementById("guideContent").hidden = false;
     document.getElementById("toggleGuide").textContent = "收起 −";
@@ -756,6 +758,7 @@
     syncStoryContext();
     life.setWeather(environment.weather.kind);
     syncVisitors();
+    updateCityIdentityUI();
     groundLayer.innerHTML = state.items.filter((item) => ["water", "plaza"].includes(item.type)).map(renderItem).join("") + renderRoadNetwork()
       + state.items.filter((item) => item.type === "road").map(renderItem).join("")
       + state.items.filter((item) => ["house", "shop", "bench", "plaza", "pavilion", "garden", "dock"].includes(item.type)).map(buildingWalk).join("");
@@ -800,6 +803,64 @@
     }
     setWorldTransform();
     updateCollectionBar();
+  }
+
+  function updateCityIdentityUI() {
+    if (!globalThis.PalmCityIdentity) return;
+    const layout = state.items
+      .map(({ type, x, y, rotate }) => [type, Number(x.toFixed(3)), Number(y.toFixed(3)), Number(Number(rotate || 0).toFixed(3))])
+      .sort((a, b) => a[0].localeCompare(b[0]) || a[1] - b[1] || a[2] - b[2] || a[3] - b[3]);
+    const key = JSON.stringify([layout, state.season, environment.weather.kind]);
+    if (key !== cityIdentityKey || !cityIdentity) {
+      cityIdentityKey = key;
+      cityIdentity = PalmCityIdentity.analyze(state.items, { season: state.season, weather: environment.weather.kind });
+    }
+
+    const card = document.querySelector(".city-identity-card");
+    const seal = document.getElementById("cityIdentitySeal");
+    const sceneSeal = document.getElementById("sceneIdentitySeal");
+    if (!card || !seal || !sceneSeal) return;
+    seal.textContent = cityIdentity.seal;
+    sceneSeal.textContent = cityIdentity.seal;
+    document.getElementById("cityIdentityTitle").textContent = cityIdentity.title;
+    document.getElementById("sceneIdentityTitle").textContent = cityIdentity.title;
+    document.getElementById("cityIdentitySummary").textContent = cityIdentity.summary;
+    document.getElementById("cityIdentityResidentLine").textContent = cityIdentity.residentLine;
+    document.getElementById("cityIdentitySignature").textContent = cityIdentity.signature;
+    card.dataset.primary = cityIdentity.primary || "empty";
+    card.dataset.unserved = String(cityIdentity.unservedCount > 0);
+
+    const traits = document.getElementById("cityIdentityTraits");
+    traits.replaceChildren(...cityIdentity.traits.map((trait) => {
+      const tag = document.createElement("span");
+      tag.textContent = trait;
+      return tag;
+    }));
+    const sceneTraits = document.getElementById("sceneIdentityTraits");
+    sceneTraits.textContent = cityIdentity.traits.slice(0, 2).join(" · ");
+
+    const districts = document.getElementById("cityIdentityDistricts");
+    if (!cityIdentity.districts.length) {
+      const empty = document.createElement("span");
+      empty.className = "identity-district is-empty";
+      empty.textContent = cityIdentity.primary ? "街区还在生长" : "第一条小路，等一枚脚印";
+      districts.replaceChildren(empty);
+    } else {
+      districts.replaceChildren(...cityIdentity.districts.map((district) => {
+        const chip = document.createElement("span");
+        chip.className = "identity-district";
+        chip.setAttribute("aria-label", `${district.label}，强度 ${district.strength} / 5`);
+        const symbol = document.createElement("i");
+        symbol.setAttribute("aria-hidden", "true");
+        symbol.textContent = district.symbol;
+        const label = document.createElement("span");
+        label.textContent = district.label;
+        const meter = document.createElement("b");
+        meter.style.setProperty("--district-strength", district.strength);
+        chip.append(symbol, label, meter);
+        return chip;
+      }));
+    }
   }
 
   function updateActiveCard() {
@@ -895,6 +956,7 @@
     if (!environment.setWeather(kind)) return;
     life.setWeather(kind);
     syncVisitors();
+    updateCityIdentityUI();
     updateWeatherUI(); updateLighting(); updateLifeUI(); updateGardenUI(); updateVisitorUI();
     persist();
     showToast(kind === "rain" ? "一场小雨来了，邻居会沿路去避雨。" : "雨停了，花园会记得这一场雨。" );
@@ -1440,7 +1502,7 @@
       const wave = state.reducedMotion ? 0 : Math.sin(animationSeconds * 9) * 2;
       const umbrella = environment.weather.kind === "rain" && resident.phase !== "sheltered";
       const speech = life.speech(resident);
-      const words = speech || PalmCitySeasons.residentLine(state.season, resident, environment.weather.kind);
+      const words = speech || cityIdentity?.residentLine || PalmCitySeasons.residentLine(state.season, resident, environment.weather.kind);
       const bubble = speech || selected || (animationSeconds + resident.slot * 7) % 28 > 24 ? "1" : "0";
       const steam = state.reducedMotion ? ".6" : String(.4 + .4 * Math.sin(animationSeconds * 2));
       const key = JSON.stringify(resident.visible ? [resident.x.toFixed(2), resident.y.toFixed(2), resident.phase, sitting, moment, selected, facing, stride, sway, moment === "greeting" ? wave : 0, umbrella, resident.carrying, words, bubble, moment === "tea" ? steam : ""] : [false]);
@@ -1621,7 +1683,7 @@
       document.getElementById("residentHobby").textContent = selected.hobby;
       document.getElementById("residentActivity").textContent = life.activity(selected);
       document.getElementById("residentAmenities").textContent = life.communityStatus(selected).summary;
-      document.getElementById("residentThought").textContent = `“${life.speech(selected) || PalmCitySeasons.residentLine(state.season, selected, environment.weather.kind)}”`;
+      document.getElementById("residentThought").textContent = `“${life.speech(selected) || cityIdentity?.residentLine || PalmCitySeasons.residentLine(state.season, selected, environment.weather.kind)}”`;
       const connections = life.relationships(selected);
       document.getElementById("residentConnections").textContent = connections.length
         ? connections.map(bond => `${bond.name} · ${bond.level} · 相遇 ${bond.count} 次`).join("\n")
@@ -1709,7 +1771,7 @@
       const change = environment.tick(dt);
       if (change.weatherChanged) {
         life.setWeather(environment.weather.kind);
-        updateWeatherUI(); updateLighting(); persist();
+        updateCityIdentityUI(); updateWeatherUI(); updateLighting(); updateLifeUI(); persist();
       }
       if (change.stageChanged) { refreshGardens(); persist(); }
       syncStoryContext();

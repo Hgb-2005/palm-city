@@ -1204,3 +1204,149 @@ button:focus-visible { outline: 2px solid #7f9b69; outline-offset: 3px; }
 }
 
 .resident-connections{white-space:pre-line;font-size:11px;line-height:1.9;color:#65745e;border-top:1px solid #82957733;padding-top:10px;max-height:96px;overflow:auto}
+
+/* Chapter 17 — a city grows a name of its own. */
+.city-identity-card {
+  --identity-accent: #809071;
+  --identity-wash: #f2f2e5;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  margin: 12px 0 18px;
+  padding: 16px 14px 13px;
+  overflow: hidden;
+  border: 1px solid rgba(104, 121, 91, .2);
+  border-radius: 15px;
+  color: #5d6e59;
+  background:
+    radial-gradient(circle at 108% -8%, color-mix(in srgb, var(--identity-accent) 18%, transparent) 0 28%, transparent 29%),
+    linear-gradient(145deg, #fffdf4 0%, var(--identity-wash) 100%);
+  box-shadow: inset 0 1px 0 #fff9, 0 8px 22px rgba(64, 80, 55, .055);
+}
+.city-identity-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 13px;
+  bottom: 8px;
+  width: 64px;
+  height: 19px;
+  border-bottom: 1px solid color-mix(in srgb, var(--identity-accent) 35%, transparent);
+  border-radius: 50%;
+  opacity: .4;
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+.city-identity-card[data-primary="residential"] { --identity-accent: #9a8265; --identity-wash: #f3ede0; }
+.city-identity-card[data-primary="commercial"] { --identity-accent: #ac7f63; --identity-wash: #f5eadc; }
+.city-identity-card[data-primary="green"] { --identity-accent: #779a69; --identity-wash: #eaf0df; }
+.city-identity-card[data-primary="waterside"] { --identity-accent: #6e9494; --identity-wash: #e5efeb; }
+.city-identity-card[data-primary="leisure"] { --identity-accent: #9b8a65; --identity-wash: #f2eddc; }
+.city-identity-card[data-primary="empty"] { --identity-accent: #9da292; --identity-wash: #f1f1e7; }
+.city-identity-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.city-identity-heading > div { min-width: 0; }
+.city-identity-heading .eyebrow { display: block; color: color-mix(in srgb, var(--identity-accent) 75%, #8c8d80); font-size: 6px; letter-spacing: .12em; line-height: 1.4; }
+.city-identity-heading h3 { margin: 4px 0 0; color: color-mix(in srgb, var(--identity-accent) 68%, #33483c); font-size: 17px; font-weight: 500; line-height: 1.35; letter-spacing: .09em; }
+.city-identity-seal,
+.scene-identity-seal {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--identity-accent, #7f9270);
+  font-family: "STKaiti", "KaiTi", "Microsoft YaHei", sans-serif;
+}
+.city-identity-seal {
+  width: 39px;
+  height: 39px;
+  border: 1px solid color-mix(in srgb, var(--identity-accent) 55%, transparent);
+  border-radius: 11px 8px 12px 9px;
+  background: color-mix(in srgb, var(--identity-wash) 55%, #fff);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--identity-accent) 8%, transparent);
+  font-size: 20px;
+  transform: rotate(-4deg);
+}
+.city-identity-summary { margin: 12px 0 11px; color: #7d8875; font-size: 10px; line-height: 1.85; }
+.identity-traits { display: flex; flex-wrap: wrap; gap: 5px; }
+.identity-traits > span { padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--identity-accent) 17%, transparent); border-radius: 99px; color: color-mix(in srgb, var(--identity-accent) 82%, #637064); background: #fffdf463; font-size: 8px; line-height: 1.35; }
+.identity-districts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
+.identity-district {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 32px;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 6px;
+  border-radius: 9px;
+  color: #73806b;
+  background: rgba(255, 253, 245, .62);
+}
+.identity-district i { color: var(--identity-accent); font-size: 11px; font-style: normal; text-align: center; }
+.identity-district > span { overflow: hidden; font-size: 8px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.identity-district b { position: relative; display: block; height: 4px; overflow: hidden; border-radius: 99px; background: color-mix(in srgb, var(--identity-accent) 13%, #eef0e5); }
+.identity-district b::before { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--district-strength, 1) * 20%); border-radius: inherit; background: color-mix(in srgb, var(--identity-accent) 72%, #9ba98d); }
+.identity-district.is-empty { grid-column: 1 / -1; display: block; padding: 9px 7px; color: #999f8e; text-align: center; font-size: 8px; line-height: 1.5; }
+.identity-resident-line { margin: 12px 0 0; padding: 10px 10px 9px; border: 0; border-left: 2px solid color-mix(in srgb, var(--identity-accent) 55%, transparent); border-radius: 0 8px 8px 0; background: rgba(255, 253, 245, .47); }
+.identity-resident-line > span { display: block; color: #a0a392; font-size: 7px; letter-spacing: .11em; }
+.identity-resident-line p { margin: 4px 0 0; color: #70806a; font-family: "STKaiti", "KaiTi", "Microsoft YaHei", sans-serif; font-size: 11px; line-height: 1.7; }
+.city-identity-foot { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--identity-accent) 22%, transparent); color: #9b9f8e; font-size: 7px; }
+.city-identity-foot b { color: color-mix(in srgb, var(--identity-accent) 78%, #829078); font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 7px; font-weight: 500; letter-spacing: .03em; white-space: nowrap; }
+.city-identity-card[data-unserved="true"] .city-identity-foot > span::after { content: " · 路外仍有风景"; color: #9c8767; }
+
+.scene-identity-line { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 7px; width: max-content; max-width: min(360px, 58vw); min-width: 0; color: #77886f; }
+.scene-identity-seal { width: 21px; height: 21px; border: 1px solid #8a9c7c88; border-radius: 5px 4px 6px 4px; background: #fffdf06b; font-size: 11px; transform: rotate(-4deg); }
+.scene-identity-title { flex: 0 1 auto; overflow: hidden; color: #62785d; font-size: 10px; letter-spacing: .08em; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.scene-identity-traits { flex: 1 1 130px; min-width: 0; overflow: hidden; color: #8b9880; font-size: 8px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; opacity: .9; }
+.stage-card[data-period="night"] .scene-identity-title { color: #e0dfc4; }
+.stage-card[data-period="night"] .scene-identity-traits { color: #b0bea8; }
+.stage-card[data-period="night"] .scene-identity-seal { color: #d7d8b5; border-color: #d7d8b588; background: #eef0d312; }
+
+@media (min-width: 1181px) {
+  .archive-panel { overflow-x: hidden; overscroll-behavior-y: contain; }
+  .archive-panel > * { min-width: 0; }
+}
+@media (min-width: 1181px) and (max-width: 1440px) {
+  .city-identity-card { padding-inline: 12px; }
+  .identity-districts { gap: 4px; }
+  .identity-district { grid-template-columns: 12px minmax(0, 1fr) 27px; padding-inline: 5px; }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .archive-panel .city-identity-card { flex: 0 0 100%; margin: 2px 0 10px; }
+  .archive-panel .city-identity-summary { max-width: 720px; }
+  .archive-panel .identity-districts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .archive-panel .identity-district.is-empty { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .archive-panel { min-width: 0; }
+  .archive-panel > * { flex-shrink: 0; }
+  .mobile-archive-open .archive-panel { overflow-x: hidden; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+  .city-identity-card { margin: 9px 0 17px; padding: 14px 12px 12px; }
+  .city-identity-heading h3 { font-size: 16px; }
+  .city-identity-summary { margin-block: 10px; font-size: 10px; }
+  .identity-district { min-height: 31px; }
+  .scene-identity-line { max-width: calc(100vw - 64px); }
+  .scene-identity-title { font-size: 9px; }
+  .scene-identity-traits { display: none; }
+  .is-viewing .scene-identity-line { max-width: calc(100vw - 52px); padding-top: 2px; }
+  .is-viewing .scene-identity-seal { display: none; }
+}
+@media (max-width: 430px) {
+  .city-identity-heading { gap: 9px; }
+  .city-identity-heading .eyebrow { font-size: 5.5px; }
+  .city-identity-seal { width: 35px; height: 35px; font-size: 18px; }
+  .identity-districts { grid-template-columns: 1fr; }
+  .identity-district { grid-template-columns: 15px minmax(0, 1fr) 44px; min-height: 32px; }
+  .city-identity-foot { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+@media (max-width: 370px) {
+  .city-identity-card { padding-inline: 10px; }
+  .city-identity-heading h3 { font-size: 15px; }
+  .identity-traits > span { padding: 4px 6px; font-size: 7.5px; }
+  .identity-resident-line p { font-size: 10px; }
+  .scene-identity-line { gap: 4px; max-width: calc(100vw - 54px); }
+  .scene-identity-title { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-identity-card,
+  .city-identity-card *,
+  .scene-identity-line * { transition: none !important; animation: none !important; }
+}
